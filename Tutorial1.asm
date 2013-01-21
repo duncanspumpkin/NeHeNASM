@@ -96,38 +96,43 @@ import gluPerspective glu32.dll
 
 section .code use32 
 
+;; In order to make this code as similar as possible to NeHe's OpenGL tutorial
+;; we will first get all of the params of WinMain and call the WinMain function
+;; if we were going for as small a program as possible this could be done all in
+;; the WinMain function.
+
+;; Entry point of program
 ..start: 
 push dword 0 
 ;; GetModuleHandleA returns handle to the file used to create this proc when null (0) is param
 call [GetModuleHandleA] 
 
-;;Store the result in the hInstance global variable. See end of file
-mov dword [hInstance], eax 
+;;Store the result in the ebx reg.
+mov ebx, eax 
 
 ;; Returns a pointer to the command line arguments. If we are not using commandline params this is
 ;; not requried.
 call [GetCommandLineA] 
-
-;;Store result for later
-mov dword [CommandLine], eax 
+;;Since we only use this to send to WinMain there is no point saving it to a variable
 
 ;; For the sake of making things look like a normal C prog we have a winmain func
 ;; this will be passed all the normal winmain params (i.e. handle to instance, previous instance,
 ;; commandline params, show param).
-;; The parameters to pass are:  hInstance, 0, CommandLine, SW_SHOWDEFAULT 
-;; SW_<something> is a Windows constant for how to show a window. 
 push dword SW_SHOWDEFAULT 
-push dword [CommandLine]   ;;push actual pointer to command arguments 
+push eax   ;;push pointer to command line arguments 
 ;; And a NULL 
 push dword 0 
 ;; Then the hInstance variable. 
-push dword [hInstance] 
+push ebx 
 
 ;; And we make a call to WindowMain(). See below.
 call WindowMain 
+
 ;; The program should be complete now push the result of our prog and exit.
 push eax 
 call [ExitProcess] 
+;; Exit Point of our program
+
 
 ;; Resize the OpenGL Scene
 ;;
@@ -136,12 +141,15 @@ call [ExitProcess]
 ResizeGLScene:
 .width equ 8
 .height equ 12
-.aspectRatio equ 8
-  enter 8,0 ;Aspect ratio is a local var we use
+.aspectRatio equ 8 ;Aspect ratio is a qword and takes 8 bytes
+  enter .aspectRatio,0 ;Aspect ratio is furthest in stack
+  
+  ;Adds one to height if 0 to prevent divide by 0 problem
   cmp dword [ebp+.height],0
-  jne .heightCheck ;Add 1 to height if it is 0 to prevent a 1/0 problem
+  jne .heightCheck 
   inc dword [ebp+.height]
  .heightCheck:
+
   push dword [ebp+.height]
   push dword [ebp+.width]
   push dword 0
@@ -158,13 +166,13 @@ ResizeGLScene:
   fild dword [ebp+.width]
   fdivp st1,st0 ;width/height ? I think...
   fstp qword [ebp-.aspectRatio] ;Store the aspect ratio
-  lea ebx,[ebp-.aspectRatio]
+
   push dword [RGlS_gluFAR]
   push dword [RGlS_gluFAR+4]
   push dword [RGlS_gluNEAR]
   push dword [RGlS_gluNEAR+4] ;Problem area
-  push dword [ebx]
-  push dword [ebx+4]
+  push dword [ebp-.aspectRatio]
+  push dword [ebp-.aspectRatio-4]
   push dword [RGlS_gluFOV]
   push dword [RGlS_gluFOV+4]
   call [gluPerspective]
@@ -173,9 +181,11 @@ ResizeGLScene:
   call [glMatrixMode]
 
   call [glLoadIdentity]
+  
+  ;As we do not check for errors return true.
   mov dword eax,1
   leave
-ret 8;ResizeGLScene 2 Params
+ret 8;ResizeGLScene 2 dword Params
 
 
 
@@ -207,7 +217,8 @@ InitGL:
   push dword GL_NICEST
   push dword GL_PERSPECTIVE_CORRECTION_HINT
   call [glHint] ;Nice calculations. Performance hit to make look better
-
+  
+  ;Return true. We didnt check for errors so we assume it worked fine.
   mov dword eax,1
 ret ;InitGL
 
@@ -215,8 +226,8 @@ ret ;InitGL
 
 ;DrawGLScene This is the part which actually specifies what is being drawn.
 ;
-;
-;
+;In future this will probably be moved to a seperate file to make it a bit 
+;easier to follow.
 
 DrawGLScene:
   push dword GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT
@@ -224,6 +235,7 @@ DrawGLScene:
   
   call [glLoadIdentity] ;Reset current modelview matrix
   
+  ;Return False?
   xor eax,eax
 ret ;DrawGLScene
 
@@ -235,14 +247,17 @@ ret ;DrawGLScene
 
 KillGLWindow:
   mov ax,[fullscreen]
-  or ax,ax
-  jz .NotFullScreen
+  bt ax,0
+  jnc .NotFullScreen
+  ;mov ax,[fullscreen]
+  ;or ax,ax
+  ;jz .NotFullScreen
 
-  push dword 0 ;word??
+  push dword 0 
   push dword 0 ;Switch back to desktop
   call [ChangeDisplaySettingsA]
 
-  push dword 1 ;Show cursor. word??
+  push dword 1 ;Show cursor.
   call [ShowCursor]
 
  .NotFullScreen:
@@ -266,7 +281,7 @@ KillGLWindow:
   push dword [hRC]
   call [wglDeleteContext]
 
-  or ax,ax
+  or eax,eax
   jnz .ClearRC
 
   push dword MB_OK | MB_ICONINFORMATION
@@ -276,12 +291,10 @@ KillGLWindow:
   call [MessageBoxA]
 
  .ClearRC:
-  xor eax,eax
-  mov dword [hRC],eax
+  mov dword [hRC],0
 
  .NoRenderContext: ;We should have no RC if we are here
-  mov dword eax,[hDC]
-  or eax,eax
+  sub dword [hDC],0
   jz .NoDeviceContext
 
   push dword [hDC]
@@ -296,12 +309,10 @@ KillGLWindow:
   push dword 0
   call [MessageBoxA]
   
-  xor eax,eax
-  mov dword [hDC],eax ;Delete device context
+  mov dword [hDC],0 ;Delete device context
  
  .NoDeviceContext:
-  mov dword eax, [hWnd]
-  or eax,eax
+  sub dword [hWnd],0
   jz .NohWnd
 
   push dword [hWnd]
@@ -309,16 +320,15 @@ KillGLWindow:
   
   or eax,eax
   jnz .NohWnd
+
   push dword MB_OK | MB_ICONINFORMATION
   push dword SHUTDWN
   push dword RHWNDFAIL
   push dword 0
   call [MessageBoxA]
   
-  xor eax,eax
-  mov dword [hWnd],eax
-
  .NohWnd:
+  mov dword [hWnd],0
   ;Unregister WndClass
   push dword [hInstance]
   push dword ClassName
@@ -331,9 +341,10 @@ KillGLWindow:
   push dword UCLASSFAIL
   push dword 0
   call [MessageBoxA]
-  mov dword [hInstance],0
+
  .KillGLEnd:
-  
+  mov dword [hInstance],0
+
 ret ;KillGLWindow
 
 ; Creates a new window
@@ -364,9 +375,11 @@ CreateGLWindow:
   mov dword [ebx+RECT.bottom],eax
   
   mov dword eax,[ebp+.fullscreen]
-  mov word [fullscreen],ax ;Possibly wrong will need to test
+  mov [fullscreen],ax ;Possibly wrong will need to test
 
-  ;; hInstance already in global var due to ..start
+  push dword 0
+  call [GetModuleHandleA]
+  mov dword [hInstance],eax
 
   ;; Now fill out wndclass
   lea ebx, [ebp-.wndClass]                  ;; We load EBX with the address of our WNDCLASSEX structure. 
@@ -422,8 +435,10 @@ CreateGLWindow:
   jmp .ExitCreateGL
 
  .RegisterClassOkay:
-  sub word [fullscreen],0
-  jz .GoWindowed
+  mov ax,[fullscreen]
+  bt ax,0
+  ;sub word [fullscreen],0
+  jnc .GoWindowed
 
   mov dword ecx, DEVMODE_size
   lea edi,[ebp-.DmScreenSettings]
@@ -466,33 +481,25 @@ CreateGLWindow:
   jmp .ExitCreateGL
 
  .GoWindowed:
-  lea ebx,[ebp-.dwStyle]
   mov word [fullscreen],0
-  mov dword [ebx],WS_OVERLAPPEDWINDOW
-  lea ebx,[ebp-.dwExStyle]
-  mov dword [ebx],WS_EX_APPWINDOW|WS_EX_WINDOWEDGE
+  mov dword [ebp-.dwStyle],WS_OVERLAPPEDWINDOW
+  mov dword [ebp-.dwExStyle],WS_EX_APPWINDOW|WS_EX_WINDOWEDGE
   jmp .AdjustWindow  
 
  .FullSuccess:
-  lea ebx,[ebp-.dwStyle]
-  mov dword [ebx],WS_POPUP
-  lea ebx,[ebp-.dwExStyle]
-  mov dword [ebx],WS_EX_APPWINDOW
+  mov dword [ebp-.dwStyle],WS_POPUP
+  mov dword [ebp-.dwExStyle],WS_EX_APPWINDOW
 
   push dword 0
   call [ShowCursor]
 
  .AdjustWindow: ;This is where everything comes back to.
-  push dword [ebx]
+  push dword [ebp-.dwExStyle]
   push dword 0
   push dword [ebp-.dwStyle]
   lea ebx,[ebp-.windowRect]
   push ebx
   call [AdjustWindowRectEx]
-  
-  push dword 0
-  call [GetModuleHandleA]
-  mov dword [hInstance],eax
 
   push dword 0
   push dword [hInstance]
@@ -502,11 +509,11 @@ CreateGLWindow:
   push dword [ebp+.width]
   push dword 0
   push dword 0
-  mov dword eax,[ebp-.dwStyle]
-  or dword eax,WS_CLIPSIBLINGS|WS_CLIPCHILDREN
-  push eax
-  lea ebx,[ebp+.title]
-  push dword [ebx]
+  
+  or dword [ebp-.dwStyle],WS_CLIPSIBLINGS|WS_CLIPCHILDREN
+
+  push dword [ebp-.dwStyle]
+  push dword [ebp+.title]
   push dword ClassName
   push dword [ebp-.dwExStyle]
   call [CreateWindowExA]
@@ -684,6 +691,7 @@ WindowMain:
 
   enter MSG_size+4, 0 
   mov dword [ebp-.done],0
+  mov dword [active],1
 
   mov dword ecx,256
   lea edi,[keys]
@@ -705,6 +713,7 @@ WindowMain:
  .FSEnd:
   xor eax,eax
   mov word ax,[fullscreen]
+  
   push eax
   push dword 16
   push dword 480
@@ -713,10 +722,7 @@ WindowMain:
   call CreateGLWindow
 
   sub eax,0
-  jnz .CreateSuccess
-  leave
-  ret 16
- .CreateSuccess:
+  jz .EndWinMain
 
  .MsgLoop:
   lea ebx,[ebp-.msg] 
@@ -742,49 +748,41 @@ WindowMain:
   jmp .MsgLoop
 
  .QuitMsg:
-  mov dword [ebp-.done],1 ;Something wrong here
+  mov dword [ebp-.done],1 
   jmp .MsgLoop
 
  .NoMsg:
   sub dword [active],0
   jnz .MsgLoop
-  ;;Problem here
-  mov dword ebx,keys ;;Add code for swap between FS and WND
-  add ebx,VK_ESCAPE
-  sub byte [ebx],0
-  jnz .EscapePress
 
-  mov dword ebx,keys
-  sub byte [ebx+VK_F1],0
+  sub byte [keys+VK_ESCAPE],0
+  jnz .QuitMsg
+
+  sub byte [keys+VK_F1],0
   jnz .SwitchFullScreen
   
   call DrawGLScene
+
   push dword [hDC]
   call [SwapBuffers]
-  jmp .MsgLoop
- .EscapePress:
-  mov dword [ebp-.done],1
+
   jmp .MsgLoop
 
  .SwitchFullScreen:
-  mov byte [ebx+VK_F1],0
+  mov byte [keys+VK_F1],0
   call KillGLWindow
 
-  sub word [fullscreen],0
-  jnz .enableFS
-  mov word [fullscreen],1
-  jmp .endFSNot
- .enableFS:
-  mov word [fullscreen],0
- .endFSNot:
+  xor word [fullscreen],1
   xor eax,eax
   mov word ax,[fullscreen]
+
   push dword eax
   push dword 16
   push dword 480
   push dword 640
   push dword ApplicationName
   call CreateGLWindow
+
   sub eax,0
   jnz .MsgLoop
   xor eax,eax
@@ -792,8 +790,7 @@ WindowMain:
 
  .EndMsgLoop:
   call KillGLWindow
-  lea ebx,[ebp-.msg] 
-  mov eax,[ebx+MSG.message]
+  mov eax,[ebp-.msg-MSG.message]
 
  .EndWinMain:
   leave
@@ -895,11 +892,16 @@ WindowProcedure:
  
  .window_active:
   sub word [ebp+.wParam+2],0
-  jz .Active
-  mov dword [active],1
-  jmp .window_finish
- .Active:
-  mov dword [active],0
+  lahf
+  shr ah,7
+  and ah,1
+  mov [active],ah
+  ;hmm is the above worth it 1 conditonal jump or a bunch of maths
+ ; jz .SetInActive
+ ; mov dword [active],1
+ ; jmp .window_finish
+ ;.SetInActive:
+ ; mov dword [active],0
   jmp .window_finish
  
  .window_size: ;Add ReSizeGLScene(LOWORD(lParam),HIWORD(lParam));
@@ -973,12 +975,9 @@ IGl_DEPTH         dq 1.0   ;Depth buffer
 section .bss USE32
 ;; And we reserve a double-word for hInstance and a double-word for CommandLine. 
 hInstance         resd 1 
-CommandLine       resd 1
 hWnd              resd 1
 hDC               resd 1
 hRC               resd 1 
-height            resd 1
-width             resd 1
 fullscreen        resw 1
 active            resd 1
 keys              resd 256
