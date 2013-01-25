@@ -12,6 +12,10 @@ Lesson 2: Your First Polygon - Complete
 
 Lesson 3: Adding Color - Complete
 
-Lesson 4: Adding Rotations - Not started
+Lesson 4: Rotation - Complete
+
+Lesson 5: 3D Shapes - Complete
+
+Lesson 6: Texture Mapping - Not Started
 
 ...
