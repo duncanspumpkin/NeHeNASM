@@ -30,6 +30,8 @@ Lesson 4: Rotation - Complete
 
 Lesson 5: 3D Shapes - Complete
 
-Lesson 6: Texture Mapping - Not Started
+Lesson 6: Texture Mapping - Complete
+
+Lesson 7: Lighting - Not started
 
 ...
