@@ -832,8 +832,8 @@ WindowProcedure:
   cmp eax,WM_KEYUP
   jz .key_up
 
-  ;cmp eax,WM_SIZE
-  ;jz .window_size
+  cmp eax,WM_SIZE
+  jz .window_size
 
   ;; If the processor doesn't jump to the .window_destroy label, it means that 
   ;; the result of the comparison is not equal. In that case, the message 
@@ -888,7 +888,7 @@ WindowProcedure:
  ; mov dword [active],0
   jmp .window_finish
  
- .window_size: ;Add ReSizeGLScene(LOWORD(lParam),HIWORD(lParam));
+ .window_size: 
   mov dword eax,[ebp+.lParam]
   mov ebx,eax
   and eax,0xffff

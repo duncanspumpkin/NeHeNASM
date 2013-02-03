@@ -85,6 +85,7 @@ RETN 16
 %ENDMACRO
 
 ;-------------------------win32api equates-------------------------------
+HEAP_ZERO_MEMORY equ 8h
 WINAPI equ 1
 TRUE equ 1
 FALSE equ 0

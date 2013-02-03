@@ -105,9 +105,9 @@ DrawGLScene:
     _immglVertex3f(-1.0, -1.0,  1.0)
     _immglTexCoord2f(1.0, 0.0)
     _immglVertex3f( 1.0, -1.0,  1.0)
-    _immglTexCoord2f(1.0, 0.5)
+    _immglTexCoord2f(1.0, 1.0)
     _immglVertex3f( 1.0,  1.0,  1.0)
-    _immglTexCoord2f(0.0, 0.5)
+    _immglTexCoord2f(0.0, 1.0)
     _immglVertex3f(-1.0,  1.0,  1.0)
 
     ;; Back Face
@@ -175,4 +175,4 @@ section .bss use32
 rotationCube   resd 1
 
 section .data use32
-rotC dd 0.09
+rotC dd 0.009
