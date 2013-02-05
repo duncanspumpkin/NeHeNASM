@@ -103,6 +103,7 @@ import gluPerspective glu32.dll
 global xspeed
 global yspeed
 global zpos
+global hInstance
 
 segment code public use32 class=CODE
 
@@ -776,8 +777,8 @@ WindowMain:
 
   sub byte [keys+'L'],0
   jnz .LightToggle
-  
   mov dword [lp],0
+ .ReDraw:
   call DrawGLScene
 
   push dword [hDC]
@@ -787,9 +788,9 @@ WindowMain:
 
  .LightToggle:
   sub dword [lp],0
-  jnz .MsgLoop
+  jnz .ReDraw
   mov dword [lp],1
-  mov dword [light],1
+  xor dword [light],1
 
   push dword GL_LIGHTING
   sub dword [light],0

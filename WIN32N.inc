@@ -85,6 +85,8 @@ RETN 16
 %ENDMACRO
 
 ;-------------------------win32api equates-------------------------------
+LR_LOADFROMFILE equ 10h
+LR_CREATEDIBSECTION equ 2000h
 HEAP_ZERO_MEMORY equ 8h
 WINAPI equ 1
 TRUE equ 1

@@ -107,7 +107,7 @@ DrawGLScene:
   push dword __float32__(0.0)
   call [glTranslatef]
   
-  _glRotatef  [rotationCube],[xspeed],[yspeed], __float32__(0.1),
+  _glRotatef  [rotationCube],__float32__(0.01),[yspeed], __float32__(0.01),
 
   _immglColor3f(1.0,1.0,1.0) ;Clears the colour from above so our texture shows good
   
@@ -198,4 +198,4 @@ section .bss use32
 rotationCube   resd 1
 
 section .data use32
-rotC dd 0.09
+rotC dd 0.009
