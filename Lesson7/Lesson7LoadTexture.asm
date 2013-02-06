@@ -56,7 +56,10 @@ LoadGLTextures:
   mov ebx,eax
   sub eax,0
   jz .LoadGLTexturesEnd
-
+  ;this doesn't work as the file is made from a pallete
+  ;and we expect it to be a 24bbp bitmap
+  ;It will therefore need converting. Next test will be
+  ;if CreateDIBSection will make the correct format.
   lea ecx,[ebp-.ImgInfo]
   push ecx
   push dword BITMAP_size
