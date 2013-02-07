@@ -17,7 +17,15 @@ extern glGetError
 extern gluBuild2DMipmaps
 extern LoadImageA
 extern GetObjectA
+extern SelectObject
 extern hInstance
+extern BitBlt
+extern CreateCompatibleDC
+extern CreateBitmap
+extern CreateDIBSection
+extern GetProcessHeap
+extern HeapAlloc
+extern HeapFree
 ;extern DeleteObjectW
 
 import CreateFileA kernel32.dll
@@ -35,6 +43,14 @@ import glGetError opengl32.dll
 import gluBuild2DMipmaps glu32.dll
 import LoadImageA User32.dll
 import GetObjectA gdi32.dll
+import SelectObject gdi32.dll
+import BitBlt gdi32.dll
+import CreateCompatibleDC gdi32.dll
+import CreateBitmap gdi32.dll
+import CreateDIBSection gdi32.dll
+import GetProcessHeap kernel32.dll
+import HeapAlloc kernel32.dll
+import HeapFree kernel32.dll
 ;import DeleteObjectW gdi32.dll
 
 global LoadGLTextures
@@ -45,7 +61,9 @@ segment .code public use32 CLASS=CODE
 ;Returns non zero on success
 LoadGLTextures:
 .ImgInfo equ BITMAP_size
-  enter .ImgInfo,0
+.BmpInfo equ .ImgInfo+BITMAPINFO_size
+.BmpInfoHdr equ BITMAPINFOHEADER_size + .BmpInfo
+  enter .BmpInfoHdr,0
   push dword LR_LOADFROMFILE|LR_CREATEDIBSECTION
   push dword 0
   push dword 0
@@ -53,14 +71,47 @@ LoadGLTextures:
   push dword fileName
   push dword [hInstance]
   call [LoadImageA]
-  mov ebx,eax
+  mov dword [hBitmap],eax
   sub eax,0
   jz .LoadGLTexturesEnd
+  
+  push dword 0
+  call [CreateCompatibleDC]
+  mov dword [hDCMem],eax
+
+  push dword [hBitmap]
+  push dword [hDCMem]
+  call [SelectObject]
+
+  call [GetProcessHeap]
+  mov ebx,eax
+  
+  push dword 0x100*0x100*4
+  push HEAP_ZERO_MEMORY
+  push ebx
+  call [HeapAlloc]
+  mov [BitsPointer],eax
+
+  push dword 0
+  push dword 0
+  push dword [BitsPointer]
+  push dword DIB_RGB_COLORS
+  lea ecx,[ebp-.BmpInfoHdr]
+  mov dword [ebp+BITMAPINFOHEADER.biSize],BITMAPINFO_size
+  mov dword [ebp+BITMAPINFOHEADER.biCompression],BI_RGB
+  mov dword [ebp+BITMAPINFOHEADER.biBitCount],32
+  mov dword [ebp+BITMAPINFOHEADER.biPlanes],1
+  mov dword [ebp+BITMAPINFOHEADER.biHeight],0x100
+  mov dword [ebp+BITMAPINFOHEADER.biWidth],0x100
+  push dword ecx
+  push dword [hDCMem]
+  call [CreateDIBSection]
+  mov ebx,eax
 
   lea ecx,[ebp-.ImgInfo]
   push ecx
   push dword BITMAP_size
-  push eax
+  push ebx
   call [GetObjectA]  
 
   push dword texture
@@ -155,6 +206,9 @@ ret
 section .bss
 nBytes resd 1
 texture resd 3
-
+hDCMem resd 1
+hDCAct resd 1
+hBitmap resd 1
+BitsPointer resd 1
 section .data use32
 fileName db "Crate.bmp",0  
