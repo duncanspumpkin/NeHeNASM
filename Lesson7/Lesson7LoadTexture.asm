@@ -74,6 +74,7 @@ LoadGLTextures:
   mov dword [hBitmap],eax
   sub eax,0
   jz .LoadGLTexturesEnd
+<<<<<<< HEAD
   
   push dword 0
   call [CreateCompatibleDC]
@@ -91,7 +92,7 @@ LoadGLTextures:
   push ebx
   call [HeapAlloc]
   mov [BitsPointer],eax
-
+  ;no need to actually alocate this pointer
   push dword 0
   push dword 0
   push dword [BitsPointer]
@@ -107,6 +108,8 @@ LoadGLTextures:
   push dword [hDCMem]
   call [CreateDIBSection]
   mov ebx,eax
+
+  ;this still doesn't work
 
   lea ecx,[ebp-.ImgInfo]
   push ecx
