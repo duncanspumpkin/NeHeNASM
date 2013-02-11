@@ -2,13 +2,8 @@
 %include "OPENGL32N.INC"
 %include "GLU32N.INC"
 
-extern CreateFileA
-extern ReadFile
-extern CloseHandle
-extern SetFilePointer
-extern GetProcessHeap
-extern HeapAlloc
-extern HeapFree
+extern LocalAlloc
+extern LocalFree
 extern glGenTextures
 extern glBindTexture
 extern glTexImage2D
@@ -19,18 +14,13 @@ extern LoadImageA
 extern GetObjectA
 extern SelectObject
 extern CreateCompatibleDC
-extern hInstance
 extern GetDIBits
-;extern DeleteObjectW
-;extern ReleaseDC
+extern DeleteObject
+extern DeleteDC
 
-import CreateFileA kernel32.dll
-import ReadFile kernel32.dll
-import SetFilePointer kernel32.dll
-import CloseHandle kernel32.dll
-import GetProcessHeap kernel32.dll
-import HeapAlloc kernel32.dll
-import HeapFree kernel32.dll
+
+import LocalAlloc kernel32.dll
+import LocalFree kernel32.dll
 import glGenTextures opengl32.dll
 import glBindTexture opengl32.dll
 import glTexImage2D opengl32.dll
@@ -42,79 +32,119 @@ import GetObjectA gdi32.dll
 import SelectObject gdi32.dll
 import CreateCompatibleDC gdi32.dll
 import GetDIBits gdi32.dll
-;import DeleteObjectW gdi32.dll
+import DeleteObject gdi32.dll
+import DeleteDC gdi32.dll
 
 global LoadGLTextures
 global texture
 
 segment .code public use32 CLASS=CODE
 
-;Returns non zero on success
-LoadGLTextures:
-.ImgInfo equ BITMAP_size
-.BitmapInfo equ BITMAPINFOHEADER_size + .ImgInfo
-  enter .BitmapInfo,0
+;Returns a pointer to the bitmap data
+;The first 2 dwords contain width and length
+LoadBitmap:
+ .FileName equ 8
+
+ .ImgInfo equ BITMAP_size
+ .BitmapInfo equ .ImgInfo+BITMAPINFOHEADER_size
+ .hBitmap equ .BitmapInfo+4
+ .hDC equ .hBitmap+4
+ .DataPtr equ .hDC+4
+  enter .DataPtr,0
+
   push dword LR_LOADFROMFILE|LR_CREATEDIBSECTION
   push dword 0
   push dword 0
   push dword IMAGE_BITMAP
-  push dword fileName
-  push dword [hInstance]
+  push dword [ebp+.FileName]
+  push dword 0
   call [LoadImageA]
-  mov ebx,eax
-  mov [hBitmap],eax
-  sub eax,0
-  jz .LoadGLTexturesEnd
+  mov [ebp-.hBitmap],eax
 
+  sub eax,0
+  jz .LoadBitmapEnd
+
+  lea ebx,[ebp-.ImgInfo]
+  push ebx
+  push dword BITMAP_size
+  push eax
+  call [GetObjectA]  ;Fill in the imgInfo
+  
 
   push dword 0
   call [CreateCompatibleDC]
-  mov dword [hDCMem],eax
+  mov dword [ebp-.hDC],eax
   
-  push dword [hBitmap]
+  sub eax,0
+  jz .LoadBitmapEnd
+  
+  push dword [ebp-.hBitmap]
   push eax
   call [SelectObject]
   
+  lea ecx,[ebp-.BitmapInfo]
+  mov dword [ecx+BITMAPINFOHEADER.biSize],BITMAPINFOHEADER_size
+  mov dword eax,[ebx+BITMAP.bmWidth]
+  mov dword [ecx+BITMAPINFOHEADER.biWidth],eax
+  mov dword eax,[ebx+BITMAP.bmHeight]
+  mov dword [ecx+BITMAPINFOHEADER.biHeight],eax
+  mov word [ecx+BITMAPINFOHEADER.biPlanes],0x1
+  mov word [ecx+BITMAPINFOHEADER.biBitCount],24 ;Remember to change heap alloc as well
+  mov dword [ecx+BITMAPINFOHEADER.biCompression],0
+  mov dword [ecx+BITMAPINFOHEADER.biSizeImage],0
+  mov dword [ecx+BITMAPINFOHEADER.biXPelsPerMeter],0
+  mov dword [ecx+BITMAPINFOHEADER.biYPelsPerMeter],0
+  mov dword [ecx+BITMAPINFOHEADER.biClrUsed],0x0
+  mov dword [ecx+BITMAPINFOHEADER.biClrImportant],0x0
+
+  mov dword ecx,[ebx+BITMAP.bmWidth]
+  mov dword eax,[ebx+BITMAP.bmHeight]
+  mul ecx
+  mov dword ecx,3
+  mul ecx ;3 bytes for each pixel
+  add eax,8 ;2 dwords for width/height
+  mov dword ebx,eax
+
+  push ebx
+  push LMEM_ZEROINIT
+  call [LocalAlloc]
+  mov [ebp-.DataPtr],eax
+
+
   lea ebx,[ebp-.BitmapInfo]
-  
-  mov dword [ebx+BITMAPINFOHEADER.biSize],BITMAPINFOHEADER_size
-  mov dword [ebx+BITMAPINFOHEADER.biWidth],0x100
-  mov dword [ebx+BITMAPINFOHEADER.biHeight],0x100
-  mov word [ebx+BITMAPINFOHEADER.biPlanes],0x1
-  mov word [ebx+BITMAPINFOHEADER.biBitCount],24
-  mov dword [ebx+BITMAPINFOHEADER.biCompression],0
-  mov dword [ebx+BITMAPINFOHEADER.biSizeImage],0
-  mov dword [ebx+BITMAPINFOHEADER.biXPelsPerMeter],0
-  mov dword [ebx+BITMAPINFOHEADER.biYPelsPerMeter],0
-  mov dword [ebx+BITMAPINFOHEADER.biClrUsed],0x0
-  mov dword [ebx+BITMAPINFOHEADER.biClrImportant],0x0
+  mov dword ecx,[ebx+BITMAP.bmWidth]
+  mov [eax],ecx
+  mov dword ecx,[ebx+BITMAP.bmHeight]
+  mov [eax+4],ecx
+  add dword eax,8
 
-  call [GetProcessHeap]
-
-  push dword 0x100*0x100*3
-  push HEAP_ZERO_MEMORY
-  push eax
-  call [HeapAlloc]
-  mov [ptrBits],eax
-
-  lea ebx,[ebp-.BitmapInfo]
-  
   push dword DIB_RGB_COLORS
   push ebx
-  push dword [ptrBits]
-  push dword 0x100
+  push eax
+  push dword [eax-4]
   push dword 0
-  push dword [hBitmap]
-  push dword [hDCMem]
+  push dword [ebp-.hBitmap]
+  push dword [ebp-.hDC]
   call [GetDIBits]
-  mov ebx,[ptrBits]  
-
   
-  lea ecx,[ebp-.ImgInfo]
-  push ecx
-  push dword BITMAP_size
-  push dword [hBitmap]
-  call [GetObjectA]  
+  push dword [ebp-.hBitmap]
+  call [DeleteObject]
+
+  push dword [ebp-.hDC]
+  call [DeleteDC]
+
+  mov eax,[ebp-.DataPtr]  
+ .LoadBitmapEnd:
+  leave
+retn 4
+
+;Returns non zero on success
+LoadGLTextures:
+
+  push dword fileName
+  call LoadBitmap
+  mov ebx,eax
+  add dword ebx,8
 
   push dword texture
   push dword 3  
@@ -134,13 +164,13 @@ LoadGLTextures:
   push dword GL_TEXTURE_2D
   call [glTexParameteri] 
  
-  lea ecx,[ebp-.ImgInfo]
-  push dword [ptrBits]
+  
+  push dword ebx
   push dword GL_UNSIGNED_BYTE
   push dword GL_BGR_EXT
   push dword 0
-  push dword [ecx+BITMAP.bmHeight]
-  push dword [ecx+BITMAP.bmWidth]
+  push dword [ebx-4]
+  push dword [ebx-8]
   push dword 3
   push dword 0
   push dword GL_TEXTURE_2D
@@ -160,13 +190,12 @@ LoadGLTextures:
   push dword GL_TEXTURE_2D
   call [glTexParameteri]  
 
-  lea ecx,[ebp-.ImgInfo]
-  push dword [ptrBits]
+  push dword ebx
   push dword GL_UNSIGNED_BYTE
   push dword GL_BGR_EXT
   push dword 0
-  push dword [ecx+BITMAP.bmHeight]
-  push dword [ecx+BITMAP.bmWidth]
+  push dword [ebx-4]
+  push dword [ebx-8]
   push dword 3
   push dword 0
   push dword GL_TEXTURE_2D
@@ -186,32 +215,26 @@ LoadGLTextures:
   push dword GL_TEXTURE_2D
   call [glTexParameteri]  
 
-  lea ecx,[ebp-.ImgInfo]
-  push dword [ptrBits]
+  push dword ebx
   push dword GL_UNSIGNED_BYTE
   push dword GL_BGR_EXT
-  push dword [ecx+BITMAP.bmHeight]
-  push dword [ecx+BITMAP.bmWidth]
+  push dword [ebx-4]
+  push dword [ebx-8]
   push dword 3
   push dword GL_TEXTURE_2D
   call [gluBuild2DMipmaps]
 
-  ;push ebx
-  ;call [DeleteObjectW]
+  sub ebx,8
+  push ebx
+  call [LocalFree]
 
   mov dword eax,1
 
  .LoadGLTexturesEnd:
-  leave
 ret
 
 section .bss
-nBytes resd 1
 texture resd 3
-hDCMem  resd 1
-hBitmap resd 1
-ptrBits resd 1
-rgb     resq 1
 
 section .data use32
 fileName db "Crate.bmp",0  

@@ -1011,6 +1011,7 @@ LightAmbient      dd 0.5, 0.5, 0.5, 1.0
 LightDiffuse      dd 1.0, 1.0, 1.0, 1.0
 LightPosition     dd 0.0, 0.0, 2.0, 1.0
 zpos              dd -5.0
+light             dd 1
 section .bss USE32
 ;; And we reserve a double-word for hInstance, hWnd, hDC, hRC.
 hInstance         resd 1 
@@ -1018,7 +1019,6 @@ hWnd              resd 1
 hDC               resd 1
 hRC               resd 1
 filter            resd 1
-light             resd 1
 lp                resd 1
 fp                resd 1
 
