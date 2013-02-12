@@ -32,6 +32,9 @@ Lesson 5: 3D Shapes - Complete
 
 Lesson 6: Texture Mapping - Complete
 
-Lesson 7: Lighting - Not started
+Lesson 7: Texture Filters, Lighting and Keyboard Control - Complete
+
+Lesson 8: Blending - Not Started
+
 
 ...

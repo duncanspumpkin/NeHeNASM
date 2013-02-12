@@ -103,7 +103,7 @@ import gluPerspective glu32.dll
 global xspeed
 global yspeed
 global zpos
-global hInstance
+global filter
 
 segment code public use32 class=CODE
 
@@ -777,7 +777,30 @@ WindowMain:
 
   sub byte [keys+'L'],0
   jnz .LightToggle
+
+  sub byte [keys+'F'],0
+  jnz .FilterChange
+
+  sub byte [keys+VK_UP],0
+  jnz .VKUP
+  
+  sub byte [keys+VK_DOWN],0
+  jnz .VKDOWN
+
+  sub byte [keys+VK_LEFT],0
+  jnz .VKLEFT
+
+  sub byte [keys+VK_RIGHT],0
+  jnz .VKRIGHT
+
+  sub byte [keys+VK_PRIOR],0
+  jnz .VKPGUP
+
+  sub byte [keys+VK_NEXT],0
+  jnz .VKPGDWN
+  
   mov dword [lp],0
+  mov dword [fp],0
  .ReDraw:
   call DrawGLScene
 
@@ -786,6 +809,7 @@ WindowMain:
 
   jmp .MsgLoop
 
+;*****************
  .LightToggle:
   sub dword [lp],0
   jnz .ReDraw
@@ -800,7 +824,80 @@ WindowMain:
  .LightOff:
   call [glDisable]  
   jmp .MsgLoop
+;*****************
 
+;*****************
+ .FilterChange:
+  sub dword [fp],0
+  jnz .ReDraw
+  mov dword [fp],1
+  
+  add dword [filter],4 ;Since it is a dword we add 4 to address each time
+  cmp dword [filter],12 ;We dont want to go over our 3 filters (3*4=12)
+  jne .MsgLoop
+  mov dword [filter],0 
+  jmp .MsgLoop
+;*****************
+
+;*****************
+ .VKUP:
+  ;xspeed-=0.01f
+  fld dword [xspeed]
+  fsub dword [xygap]
+  fstp dword [xspeed]
+  mov dword [keys+VK_UP],0
+  jmp .MsgLoop
+;*****************
+
+;*****************
+ .VKDOWN:
+  ;xspeed+=0.01f
+  fld dword [xspeed]
+  fadd dword [xygap]
+  fstp dword [xspeed]
+  mov dword [keys+VK_DOWN],0
+  jmp .MsgLoop
+;*****************
+
+;*****************
+ .VKLEFT:
+  ;yspeed-=0.01f
+  fld dword [yspeed]
+  fsub dword [xygap]
+  fstp dword [yspeed]
+  mov dword [keys+VK_LEFT],0
+  jmp .MsgLoop
+;*****************
+
+;*****************
+ .VKRIGHT:
+  ;yspeed+=0.01f
+  fld dword [yspeed]
+  fadd dword [xygap]
+  fstp dword [yspeed]
+  mov dword [keys+VK_RIGHT],0
+  jmp .MsgLoop
+;*****************
+
+;*****************
+ .VKPGUP:
+  ;zpos-=0.02f
+  fld dword [zpos]
+  fsub dword [zgap]
+  fstp dword [zpos]
+  mov dword [keys+VK_PRIOR],0
+  jmp .MsgLoop
+;*****************
+
+;*****************
+ .VKPGDWN:
+  ;zpos+=0.02f
+  fld dword [zpos]
+  fadd dword [zgap]
+  fstp dword [zpos]
+  mov dword [keys+VK_NEXT],0
+  jmp .MsgLoop
+;*****************
  .SwitchFullScreen:
   mov byte [keys+VK_F1],0
   call KillGLWindow
@@ -1010,15 +1107,17 @@ IGl_DEPTH         dq 1.0   ;Depth buffer
 LightAmbient      dd 0.5, 0.5, 0.5, 1.0
 LightDiffuse      dd 1.0, 1.0, 1.0, 1.0
 LightPosition     dd 0.0, 0.0, 2.0, 1.0
+xygap             dd 0.01
+zgap              dd 0.02
 zpos              dd -5.0
 light             dd 1
+filter            dd 0
 section .bss USE32
 ;; And we reserve a double-word for hInstance, hWnd, hDC, hRC.
 hInstance         resd 1 
 hWnd              resd 1
 hDC               resd 1
 hRC               resd 1
-filter            resd 1
 lp                resd 1
 fp                resd 1
 

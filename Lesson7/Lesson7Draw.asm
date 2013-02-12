@@ -17,6 +17,7 @@ extern glDisable
 extern glNormal3f
 
 extern texture
+extern filter
 extern xspeed
 extern yspeed
 extern zpos
@@ -107,11 +108,16 @@ DrawGLScene:
   push dword __float32__(0.0)
   call [glTranslatef]
   
-  _glRotatef  [rotationCube],__float32__(0.01),[yspeed], __float32__(0.01),
+  _glRotatef [rotX],__float32__(0.1),__float32__(0.0),__float32__(0.0)
+
+  _glRotatef [rotY],__float32__(0.0),__float32__(0.1),__float32__(0.0)
+
 
   _immglColor3f(1.0,1.0,1.0) ;Clears the colour from above so our texture shows good
   
-  push dword [texture+8]
+  mov dword eax,texture
+  add dword eax,[filter]
+  push dword [eax]
   push dword GL_TEXTURE_2D
   call [glBindTexture]
 
@@ -123,9 +129,9 @@ DrawGLScene:
     _immglVertex3f(-1.0, -1.0,  1.0)
     _immglTexCoord2f(1.0, 0.0)
     _immglVertex3f( 1.0, -1.0,  1.0)
-    _immglTexCoord2f(1.0, 0.5)
+    _immglTexCoord2f(1.0, 1.0)
     _immglVertex3f( 1.0,  1.0,  1.0)
-    _immglTexCoord2f(0.0, 0.5)
+    _immglTexCoord2f(0.0, 1.0)
     _immglVertex3f(-1.0,  1.0,  1.0)
 
     ;; Back Face
@@ -188,14 +194,17 @@ DrawGLScene:
   ;push dword GL_TEXTURE_2D
   ;call [glBindTexture]
  
-  fld dword [rotationCube]
-  fadd dword [rotC]
-  fstp dword [rotationCube]
+  fld dword [rotX]
+  fadd dword [xspeed]
+  fstp dword [rotX]
+
+  fld dword [rotY]
+  fadd dword [yspeed]
+  fstp dword [rotY]
 
   mov dword eax,1
 ret ;DrawGLScene
-section .bss use32
-rotationCube   resd 1
 
 section .data use32
-rotC dd 0.009
+rotX dd 0.0
+rotY dd 0.0
