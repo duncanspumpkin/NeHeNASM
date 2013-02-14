@@ -855,12 +855,7 @@ GL_INDEX_MATERIAL_FACE_SGI	EQU		0000081bah
 
 
 %macro gl_fpush 1
-%ifid %1
- push dword [%1]
-%else
- db 0x68
- dd %1
-%endif
+ push dword %1
 %endmacro
 
 
@@ -870,18 +865,8 @@ GL_INDEX_MATERIAL_FACE_SGI	EQU		0000081bah
 
 
 %macro gl_dpush 1
-%ifid %1
- push dword [%1+4]
- push dword [%1]
-%else
- jmp %%label
-  align 4
-%%datum:
- dq %1
-%%label:
- push dword [%%datum+4]
- push dword [%%datum]
-%endif
+ push dword %1+4
+ push dword %1
 %endmacro
 
 
@@ -952,6 +937,15 @@ GL_INDEX_MATERIAL_FACE_SGI	EQU		0000081bah
  gl_fpush %2
  gl_fpush %1
  call glColor3f
+%endmacro
+
+
+%macro _glColor4f 4
+ gl_fpush %4
+ gl_fpush %3
+ gl_fpush %2
+ gl_fpush %1
+ call [glColor4f]
 %endmacro
 
 %macro _glTexCoord2f 2

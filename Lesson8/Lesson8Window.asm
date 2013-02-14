@@ -231,7 +231,7 @@ InitGL:
   call [glClearDepth] ;Depth buffer setup
   
   _glColor4f __float32__(1.0),__float32__(1.0),__float32__(1.0),__float32__(0.5)
-  
+
   push dword GL_ONE
   push dword GL_SRC_ALPHA
   call [glBlendFunc]
@@ -1146,7 +1146,7 @@ zgap              dd 0.02
 zpos              dd -5.0
 light             dd 1
 filter            dd 0
-blend             dd 1
+blend             dd 0
 section .bss USE32
 ;; And we reserve a double-word for hInstance, hWnd, hDC, hRC.
 hInstance         resd 1 
