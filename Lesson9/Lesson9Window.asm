@@ -234,7 +234,7 @@ InitGL:
   push dword 0
   push dword 0
   push dword 0
-  push dword 0
+  push dword __float32__(0.5)
   call [glClearColor] ;Black background colour
 
   push dword [IGl_DEPTH+4] ;1.0
@@ -798,13 +798,79 @@ WindowMain:
   sub byte [keys+VK_F1],0
   jnz .SwitchFullScreen
 
- .ReDraw:
   call DrawGLScene
 
   push dword [hDC]
   call [SwapBuffers]
 
+  sub byte [keys+'T'],0
+  jnz .TwinkleToggle
+
+  sub byte [keys+VK_UP],0
+  jnz .VKUP
+
+  sub byte [keys+VK_DWON],0
+  jnz .VKDOWN
+
+  sub byte [keys+VK_PRIOR],0
+  jnz .VKPGUP
+
+  sub byte [keys+VK_NEXT],0
+  jnz .VKPGDWN
+
+  mov dword [tp],0
+
   jmp .MsgLoop
+
+;*****************
+ .FilterChange:
+  sub dword [tp],0
+  jnz .ReDraw
+  mov dword [tp],1
+  
+  xor dword [twinkle],1
+  jmp .MsgLoop
+;*****************
+
+;*****************
+ .VKUP:
+  ;tilt-=0.5f
+  fld dword [tilt]
+  fsub dword [tiltgap]
+  fstp dword [tilt]
+  mov dword [keys+VK_UP],0
+  jmp .MsgLoop
+;*****************
+
+;*****************
+ .VKDOWN:
+  ;tilt+=0.5f
+  fld dword [tilt]
+  fadd dword [tiltgap]
+  fstp dword [tilt]
+  mov dword [keys+VK_DOWN],0
+  jmp .MsgLoop
+;*****************
+
+;*****************
+ .VKPGUP:
+  ;zoom-=0.2f
+  fld dword [zoom]
+  fsub dword [zoomgap]
+  fstp dword [zoom]
+  mov dword [keys+VK_PRIOR],0
+  jmp .MsgLoop
+;*****************
+
+;*****************
+ .VKPGDWN:
+  ;zoom+=0.2f
+  fld dword [zoom]
+  fadd dword [zoomgap]
+  fstp dword [zoom]
+  mov dword [keys+VK_NEXT],0
+  jmp .MsgLoop
+;*****************
 
  .SwitchFullScreen:
   mov byte [keys+VK_F1],0
@@ -1035,6 +1101,8 @@ RGlS_gluFOV       dq 45.0  ;Far clipping plane
 ;; Double for defineing depth buffer
 IGl_DEPTH         dq 1.0   ;Depth buffer
 
+tiltgap           dd 0.5
+zoomgap           dd 0.2
 zoom              dd -15.0
 tilt              dd 90.0
 spin              dd 0.0
