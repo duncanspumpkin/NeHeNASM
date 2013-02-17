@@ -147,39 +147,13 @@ LoadGLTextures:
   add dword ebx,8
 
   push dword texture
-  push dword 3  
+  push dword 1 
   call [glGenTextures]
   
   push dword [texture]
   push GL_TEXTURE_2D
   call [glBindTexture]
   
-  push dword GL_NEAREST
-  push dword GL_TEXTURE_MAG_FILTER
-  push dword GL_TEXTURE_2D
-  call [glTexParameteri]  
-
-  push dword GL_NEAREST
-  push dword GL_TEXTURE_MIN_FILTER
-  push dword GL_TEXTURE_2D
-  call [glTexParameteri] 
- 
-  
-  push dword ebx
-  push dword GL_UNSIGNED_BYTE
-  push dword GL_BGR_EXT
-  push dword 0
-  push dword [ebx-4]
-  push dword [ebx-8]
-  push dword 3
-  push dword 0
-  push dword GL_TEXTURE_2D
-  call [glTexImage2D]
-
-  push dword [texture+4]
-  push GL_TEXTURE_2D
-  call [glBindTexture]
-  
   push dword GL_LINEAR
   push dword GL_TEXTURE_MAG_FILTER
   push dword GL_TEXTURE_2D
@@ -200,29 +174,6 @@ LoadGLTextures:
   push dword 0
   push dword GL_TEXTURE_2D
   call [glTexImage2D]
-
-  push dword [texture+8]
-  push GL_TEXTURE_2D
-  call [glBindTexture]
-  
-  push dword GL_LINEAR
-  push dword GL_TEXTURE_MAG_FILTER
-  push dword GL_TEXTURE_2D
-  call [glTexParameteri]  
-
-  push dword GL_LINEAR_MIPMAP_NEAREST
-  push dword GL_TEXTURE_MIN_FILTER
-  push dword GL_TEXTURE_2D
-  call [glTexParameteri]  
-
-  push dword ebx
-  push dword GL_UNSIGNED_BYTE
-  push dword GL_BGR_EXT
-  push dword [ebx-4]
-  push dword [ebx-8]
-  push dword 3
-  push dword GL_TEXTURE_2D
-  call [gluBuild2DMipmaps]
 
   sub ebx,8
   push ebx
@@ -234,7 +185,7 @@ LoadGLTextures:
 ret
 
 section .bss
-texture resd 3
+texture resd 1
 
 section .data use32
 fileName db "Star.bmp",0  
