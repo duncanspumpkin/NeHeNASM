@@ -2,6 +2,8 @@
 %include "WIN32N.INC"
 %include "OPENGL32N.INC"
 %include "GLU32N.INC"
+%include "Lesson9.INC"
+
 extern GetModuleHandleA 
 extern GetCommandLineA 
 extern ExitProcess 
@@ -104,21 +106,13 @@ import wglDeleteContext opengl32.dll
 import wglCreateContext opengl32.dll
 import gluPerspective glu32.dll
 
-global xspeed
-global yspeed
-global zpos
+global zoom
+global tilt
+global twinkle
+global stars
 global filter
 
-numStars equ 50
 
-STRUC Star
-.r     resb 1
-.g     resb 1
-.b     resb 1
-resb 1
-.dist  resd 1
-.angle resd 1
-ENDSTRUC
 
 segment code public use32 class=CODE
 
@@ -1105,7 +1099,6 @@ tiltgap           dd 0.5
 zoomgap           dd 0.2
 zoom              dd -15.0
 tilt              dd 90.0
-spin              dd 0.0
 twinkle           dd 1
 CurRndVal         dd 0x41059273
 MultRnd           dd 0x53347892

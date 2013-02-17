@@ -1,6 +1,7 @@
 %include "WIN32N.INC"
 %include "OPENGL32N.INC"
 %include "GLU32N.INC"
+%include "Lesson9.INC"
 
 extern glClear
 extern glLoadIdentity
@@ -15,6 +16,11 @@ extern glTexCoord2f
 extern glEnable
 extern glDisable
 extern glNormal3f
+extern texture
+extern zoom
+extern tilt
+extern stars
+extern twinkle
 
 import glLoadIdentity opengl32.dll
 import glClear opengl32.dll
@@ -95,5 +101,30 @@ DrawGLScene:
   push dword GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT
   call [glClear] ;Clear screen and depth
   
+  push dword [texture] 
+  push dword GL_TEXTURE_2D
+  call [glBindTexture]
+
+  mov dword ebx,stars ;ebx will point to current star
+  xor edx,edx         ;edx will count loop num.
+ StarLoop:
+  cmp edx,numStars
+  jeq EndStarLoop
   call [glLoadIdentity] ;Reset current modelview matrix
+
+  _glTranslatef __float32__(0.0),__float32__(0.0),[zoom]
+  _glRotatef [tilt],__float32__(1.0),__float32__(0.0),__float32__(0.0)
+
+  mov dword eax,[ebx+Star.angle]
+  _glRotatef eax,__float32__(0.0),__float32__(1.0),__float32__(0.0)
+  mov dword eax,[ebx+Star.dist]
+  _glTranslatef eax,__float32__(0.0),__float32__(0.0)
+
+
+  jmp StarLoop
+ EndStarLoop:
+  
 ret ;DrawGLScene
+
+section .data USE32
+spin  dd 0.0
