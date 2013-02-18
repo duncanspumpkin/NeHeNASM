@@ -99,6 +99,7 @@ segment code public use32 class=CODE
 ;In future this will probably be moved to a seperate file to make it a bit 
 ;easier to follow.
 
+ALIGN 4
 DrawGLScene:
 .Loop equ 4
   enter .Loop,0
@@ -182,24 +183,23 @@ DrawGLScene:
   call [glEnd]
 
 
-  fild dword [spin]
-  fild dword [spingap]
-  faddp st1,st0
-  fst dword [spin]
+  fld dword [spin]
+  fadd dword [spingap]
+  fstp dword [spin]
 
-  fild dword [ebx+Star.angle]
+  fld dword [ebx+Star.angle]
   fild dword [ebp-.Loop]
   push dword numStars
   fild dword [esp]
   pop dword eax
   fdivp st1,st0
   faddp st1,st0
-  fst dword [ebx+Star.angle]
+  fstp dword [ebx+Star.angle]
   
-  fild dword [ebx+Star.dist]
-  fild dword [distgap]
-  fsubp st1,st0
-  fst dword [ebx+Star.dist]
+  fld dword [ebx+Star.dist]
+  fsub dword [distgap]
+  fstp dword [ebx+Star.dist]
+
   ;If Star.dist < 0.0 add 5.0 and create new color
   add dword ebx,Star_size
   inc dword [ebp-.Loop]
