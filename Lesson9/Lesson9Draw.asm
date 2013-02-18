@@ -121,19 +121,19 @@ DrawGLScene:
 
   _glRotatef [ebx+Star.angle],__float32__(0.0),__float32__(1.0),__float32__(0.0)
   _glTranslatef [ebx+Star.dist],__float32__(0.0),__float32__(0.0)
-  
+
+  push dword __float32__(0.0)
+  push dword __float32__(1.0)
+  push dword __float32__(0.0)  
   push dword [ebx+Star.angle]
   xor dword [esp],0x80000000
-  push dword __float32__(0.0)
-  push dword __float32__(1.0)
-  push dword __float32__(0.0)
   call [glRotatef]   
 
+  push dword __float32__(0.0)
+  push dword __float32__(0.0)
+  push dword __float32__(1.0)
   push dword [tilt]
   xor dword [esp],0x80000000
-  push dword __float32__(1.0)
-  push dword __float32__(0.0)
-  push dword __float32__(0.0)
   call [glRotatef]   
 
  ;****************
@@ -181,10 +181,31 @@ DrawGLScene:
    _immglVertex3f(-1.0,1.0,0.0)   
   call [glEnd]
 
+
+  fild dword [spin]
+  fild dword [spingap]
+  faddp st1,st0
+  fst dword [spin]
+
+  fild dword [ebx+Star.angle]
+  fild dword [ebp-.Loop]
+  push dword numStars
+  fild dword [esp]
+  pop dword eax
+  fdivp st1,st0
+  faddp st1,st0
+  fst dword [ebx+Star.angle]
+  
+  fild dword [ebx+Star.dist]
+  fild dword [distgap]
+  fsubp st1,st0
+  fst dword [ebx+Star.dist]
+  ;If Star.dist < 0.0 add 5.0 and create new color
   add dword ebx,Star_size
   inc dword [ebp-.Loop]
   jmp .StarLoop
  .EndStarLoop:
+  mov dword eax,1
  leave
 ret ;DrawGLScene
 
