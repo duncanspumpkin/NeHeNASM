@@ -198,9 +198,23 @@ DrawGLScene:
   
   fld dword [ebx+Star.dist]
   fsub dword [distgap]
+  ftst
+  fstsw ax
   fstp dword [ebx+Star.dist]
+  fwait
+  sahf
+  
+  ja .NoDistReset
+  mov dword eax,__float32__(5.0)
+  mov dword [ebx+Star.dist],eax
+  ;ftst
+  ;fstsw
+  ;fwait
+  ;sahf
+  ;jb
 
   ;If Star.dist < 0.0 add 5.0 and create new color
+ .NoDistReset:
   add dword ebx,Star_size
   inc dword [ebp-.Loop]
   jmp .StarLoop
@@ -213,3 +227,4 @@ section .data USE32
 spin  dd 0.0
 spingap dd 0.01
 distgap dd 0.01
+zeropzero dd 0.0
