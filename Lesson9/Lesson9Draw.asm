@@ -9,6 +9,7 @@ extern glTranslatef
 extern glBegin
 extern glVertex3f
 extern glColor3f
+extern glColor4ub
 extern glRotatef
 extern glEnd
 extern glBindTexture
@@ -28,6 +29,7 @@ import glTranslatef opengl32.dll
 import glBegin opengl32.dll
 import glVertex3f opengl32.dll
 import glColor3f opengl32.dll
+import glColor4ub opengl32.dll
 import glRotatef opengl32.dll
 import glEnd opengl32.dll
 import glTexCoord2f opengl32.dll
@@ -98,6 +100,8 @@ segment code public use32 class=CODE
 ;easier to follow.
 
 DrawGLScene:
+.Loop equ 4
+  enter .Loop,0
   push dword GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT
   call [glClear] ;Clear screen and depth
   
@@ -106,25 +110,85 @@ DrawGLScene:
   call [glBindTexture]
 
   mov dword ebx,stars ;ebx will point to current star
-  xor edx,edx         ;edx will count loop num.
- StarLoop:
-  cmp edx,numStars
-  jeq EndStarLoop
+  mov dword [ebp-.Loop],0         ;loop will count loop num.
+ .StarLoop:
+  cmp dword [ebp-.Loop],numStars
+  je .EndStarLoop
   call [glLoadIdentity] ;Reset current modelview matrix
 
   _glTranslatef __float32__(0.0),__float32__(0.0),[zoom]
   _glRotatef [tilt],__float32__(1.0),__float32__(0.0),__float32__(0.0)
 
-  mov dword eax,[ebx+Star.angle]
-  _glRotatef eax,__float32__(0.0),__float32__(1.0),__float32__(0.0)
-  mov dword eax,[ebx+Star.dist]
-  _glTranslatef eax,__float32__(0.0),__float32__(0.0)
-
-
-  jmp StarLoop
- EndStarLoop:
+  _glRotatef [ebx+Star.angle],__float32__(0.0),__float32__(1.0),__float32__(0.0)
+  _glTranslatef [ebx+Star.dist],__float32__(0.0),__float32__(0.0)
   
+  push dword [ebx+Star.angle]
+  xor dword [esp],0x80000000
+  push dword __float32__(0.0)
+  push dword __float32__(1.0)
+  push dword __float32__(0.0)
+  call [glRotatef]   
+
+  push dword [tilt]
+  xor dword [esp],0x80000000
+  push dword __float32__(1.0)
+  push dword __float32__(0.0)
+  push dword __float32__(0.0)
+  call [glRotatef]   
+
+ ;****************
+  sub dword [twinkle],0
+  jz .NoTwinkle
+  mov dword eax,stars
+  add dword eax,numStars-1
+  sub dword eax,[ebp-.Loop]
+  push dword 255
+  push dword [eax+Star.b]
+  push dword [eax+Star.g]
+  push dword [eax+Star.r]
+  call [glColor4ub]
+
+  push dword GL_QUADS
+  call [glBegin]
+   _immglTexCoord2f(0.0,0.0)
+   _immglVertex3f(-1.0,-1.0,0.0)
+   _immglTexCoord2f(1.0,0.0)
+   _immglVertex3f(1.0,-1.0,0.0)
+   _immglTexCoord2f(1.0,1.0)
+   _immglVertex3f(1.0,1.0,0.0)
+   _immglTexCoord2f(0.0,1.0)
+   _immglVertex3f(-1.0,1.0,0.0)   
+  call [glEnd]
+ .NoTwinkle:
+ ;*****************
+
+  _glRotatef [spin],__float32__(0.0),__float32__(0.0),__float32__(1.0)
+  push dword 255
+  push dword [ebx+Star.b]
+  push dword [ebx+Star.g]
+  push dword [ebx+Star.r]
+  call [glColor4ub]
+
+  push dword GL_QUADS
+  call [glBegin]
+   _immglTexCoord2f(0.0,0.0)
+   _immglVertex3f(-1.0,-1.0,0.0)
+   _immglTexCoord2f(1.0,0.0)
+   _immglVertex3f(1.0,-1.0,0.0)
+   _immglTexCoord2f(1.0,1.0)
+   _immglVertex3f(1.0,1.0,0.0)
+   _immglTexCoord2f(0.0,1.0)
+   _immglVertex3f(-1.0,1.0,0.0)   
+  call [glEnd]
+
+  add dword ebx,Star_size
+  inc dword [ebp-.Loop]
+  jmp .StarLoop
+ .EndStarLoop:
+ leave
 ret ;DrawGLScene
 
 section .data USE32
 spin  dd 0.0
+spingap dd 0.01
+distgap dd 0.01

@@ -225,10 +225,10 @@ InitGL:
   push dword GL_SMOOTH
   call [glShadeModel] ;Smooth shader model
 
-  push dword 0
-  push dword 0
-  push dword 0
   push dword __float32__(0.5)
+  push dword 0
+  push dword 0
+  push dword 0
   call [glClearColor] ;Black background colour
 
   push dword [IGl_DEPTH+4] ;1.0
@@ -257,15 +257,15 @@ InitGL:
   call rand
   mov byte [edx+Star.b],ah
   push dword 5
-  fild dword [ebp]
+  fild dword [esp]
   push ebx
-  fild dword [ebp]
+  fild dword [esp]
   push dword numStars
-  fild dword [ebp]
+  fild dword [esp]
   fdivp st1,st0
   fmulp st1,st0
   fstp dword [edx+Star.dist]
-  sub dword ebp,12
+  add dword esp,12
   add edx,Star_size
   inc ebx
   mov eax,numStars
@@ -803,7 +803,7 @@ WindowMain:
   sub byte [keys+VK_UP],0
   jnz .VKUP
 
-  sub byte [keys+VK_DWON],0
+  sub byte [keys+VK_DOWN],0
   jnz .VKDOWN
 
   sub byte [keys+VK_PRIOR],0
@@ -817,9 +817,9 @@ WindowMain:
   jmp .MsgLoop
 
 ;*****************
- .FilterChange:
+ .TwinkleToggle:
   sub dword [tp],0
-  jnz .ReDraw
+  jnz .MsgLoop
   mov dword [tp],1
   
   xor dword [twinkle],1
