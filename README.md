@@ -36,7 +36,7 @@ Lesson 7: Texture Filters, Lighting and Keyboard Control - Complete
 
 Lesson 8: Blending - Complete
 
-Lesson 9: - Not Started
+Lesson 9: Moving Bitmaps in 3D Space - Complete
 
-
+Lesson 10: Loading and Moving Through A 3D World
 ...

@@ -1099,9 +1099,9 @@ tiltgap           dd 0.5
 zoomgap           dd 0.2
 zoom              dd -15.0
 tilt              dd 90.0
-twinkle           dd 1
-CurRndVal         dd 0x41059273
-MultRnd           dd 0x53347892
+twinkle           dd 0
+CurRndVal         dd 0x41159273
+MultRnd           dd 0x54632121
 ConstRnd          dd 54321
 MaskRnd           dd 0x7fffffff
 section .bss USE32

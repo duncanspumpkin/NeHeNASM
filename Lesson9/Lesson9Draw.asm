@@ -140,14 +140,21 @@ DrawGLScene:
  ;****************
   sub dword [twinkle],0
   jz .NoTwinkle
-  mov dword eax,stars
-  add dword eax,numStars-1
-  sub dword eax,[ebp-.Loop]
+  push ebx
+  mov dword ebx,stars
+  add dword ebx,numStars-1
+  sub dword ebx,[ebp-.Loop]
   push dword 255
-  push dword [eax+Star.b]
-  push dword [eax+Star.g]
-  push dword [eax+Star.r]
+  xor eax,eax
+  mov byte al,[ebx+Star.b]
+  push eax
+  mov byte al,[ebx+Star.g]
+  push eax
+  mov byte al,[ebx+Star.r]
+  push eax
   call [glColor4ub]
+
+  pop dword ebx
 
   push dword GL_QUADS
   call [glBegin]
@@ -165,9 +172,13 @@ DrawGLScene:
 
   _glRotatef [spin],__float32__(0.0),__float32__(0.0),__float32__(1.0)
   push dword 255
-  push dword [ebx+Star.b]
-  push dword [ebx+Star.g]
-  push dword [ebx+Star.r]
+  xor eax,eax
+  mov byte al,[ebx+Star.b]
+  push eax
+  mov byte al,[ebx+Star.g]
+  push eax
+  mov byte al,[ebx+Star.r]
+  push eax
   call [glColor4ub]
 
   push dword GL_QUADS
