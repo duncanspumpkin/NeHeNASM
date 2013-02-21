@@ -22,7 +22,9 @@ In order to compile these you will need NASM and ALINK at least or someother lin
     ;Required so that we can use the for loop to record all of the .obj's
     setlocal enabledelayedexpansion
     ;Compiles all .asm files in folder. Output is .obj which is also saved.
-    for %%i in (%folder%\*.asm) do @echo Compiling file: %%i&set params=!params! "%folder%\%%~ni.obj"&"C:\Program Files (x86)\NASM\nasm" -f obj %%i -i%folder%\
+    for %%i in (%folder%\*.asm) do @echo Compiling file: %%i&^
+    set params=!params! "%folder%\%%~ni.obj"&"C:\Program Files (x86)\NASM\nasm"^
+     -f obj %%i -i%folder%\
     setlocal disabledelayedexpansion
     
     @echo Starting ALINK:
