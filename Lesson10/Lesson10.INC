@@ -1,10 +1,17 @@
-numStars equ 50
+struc SECTOR
+ .numTriangles resd 1 
+ .triangle     resd 1 ;Pointer to triangle array
+endstruc
 
-STRUC Star
-.r     resb 1
-.g     resb 1
-.b     resb 1
-resb 1
-.dist  resd 1
-.angle resd 1
-ENDSTRUC
+struc TRIANGLE
+ .vertex resb 3*VERTEX_size ;3 vertex make a triangle
+endstruc
+
+struc VERTEX
+ .x resd 1
+ .y resd 1 ;3D coordinates
+ .z resd 1
+ 
+ .u resd 1 ;Texture coordinates
+ .v resd 1
+endstruc
