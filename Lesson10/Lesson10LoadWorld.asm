@@ -1,30 +1,174 @@
-extern ExitProcess
-import ExitProcess kernel32.dll
+%include "WIN32N.INC"
+%include "Lesson10.INC"
 
-segment .data USE32
+extern CreateFileA
+extern ReadFile
+extern GetFileSize
+extern CloseHandle
+extern SetFilePointer
+extern LocalAlloc
+extern LocalFree
 
-afloat db "12.145",0
-bfloat db "-123.23",0
-cfloat db "1.023E123",0
-dfloat db "-1.0223E-13",0
+import CreateFileA kernel32.dll
+import ReadFile kernel32.dll
+import GetFileSize kernel32.dll
+import SetFilePointer kernel32.dll
+import CloseHandle kernel32.dll
+import LocalAlloc kernel32.dll
+import LocalFree kernel32.dll
 
-segment .bss USE32
-fltStr resd 1
-bcdRes resd 6
-intRes resd 1
-fltRes resd 1
-endPos resd 1
-dotMult resd 1
-ePos   resd 1
-sign    resd 1
 
-segment code use32 class=CODE
+global LoadWorld
+global WorldSector
 
-..start:
-  ;First we convert the float into int removing - and . will stop at end or E
-  ;When we hit a . we start multing 10 to dotMult so that we can divide at the end
-  mov dword [fltStr],dfloat
-  mov dword ebx,[fltStr]
+segment .code public use32 CLASS=CODE
+
+;Returns zero on fail
+;Parameters: fileName
+ReadWorldFile:
+.fileName equ 8
+.bytesRead equ 4
+;Note we have added 2 extra bytes as bitmapFileHdr is 2 bytes short of alignment
+.hFile equ .bytesRead+4
+.noBytes equ .hFile+4
+.fileSize equ .noBytes+4
+.ptrFile equ .fileSize+4
+
+  ENTER .ptrFile,0
+
+  push dword 0
+  push dword FILE_ATTRIBUTE_NORMAL
+  push dword OPEN_EXISTING
+  push dword 0
+  push dword FILE_SHARE_READ
+  push dword GENERIC_READ
+  push dword [ebp+.fileName]
+  call [CreateFileA]
+  mov [ebp-.hFile],eax
+
+  cmp eax,INVALID_HANDLE_VALUE
+  jne .CreateFileSuccess
+  xor eax,eax
+  jmp .ReadWorldFileEnd
+
+ .CreateFileSuccess:
+
+  
+  lea ebx,[ebp-.fileSize]
+  push ebx 
+  ;ebx will be filled with high dword of file size
+  ;it will not be needed but needs to be pointed at something
+  push eax 
+  call [GetFileSize]
+  ;eax contains low dword of file size
+  mov dword [ebp-.fileSize],eax
+  
+  ;Add 2 bytes at end of memory to provide a stopping point
+  add dword eax,2
+  push eax
+  push dword LMEM_ZEROINIT
+  call [LocalAlloc]
+  mov dword [ebp-.ptrFile],eax
+
+  push dword 0
+  lea ebx,[ebp-.bytesRead]
+  push ebx
+  push dword [ebp-.fileSize] ;Fills in file hdr and info hdr
+  push dword [ebp-.ptrFile]
+  push dword [ebp-.hFile]
+  call [ReadFile]
+
+  push eax
+  push dword [ebp-.hFile]  
+  call [CloseHandle]
+  pop dword eax
+
+  mov dword ebx,[ebp-.fileSize]
+  cmp dword [ebp-.bytesRead],ebx
+  jne .ReadFail
+    
+  sub eax,0
+  jnz .ReadSuccess
+
+ .ReadFail: 
+  xor eax,eax
+  jmp .ReadWorldFileEnd
+
+ .ReadSuccess:
+  
+  mov eax,[ebp-.ptrFile]
+
+ .ReadWorldFileEnd:
+  leave
+ret 4
+
+;Returns non zero on success
+LoadWorld:
+  push dword fileName
+  call ReadWorldFile
+  push eax
+  call NextGoodLine
+  ;Check if next word is NUMPOLLIES
+  ;Get NUMPOLLIES
+
+  ;Allocate memory for pollies
+ 
+  ;Read rest of document
+  xor eax,eax
+  leave
+ret
+
+NextGoodLine:
+.File equ 8
+  enter 0,0
+  mov dword ebx,[ebp+.File]
+
+ .NextLine: 
+  mov word ax,[CRLF]
+  cmp word [ebx],ax
+  jne .NotCRLF
+  add dword ebx,2
+  jmp .NextLine
+
+ .NotCRLF:
+  mov word ax,[COMMENT]
+  cmp word [ebx],ax
+  jne .NotComment
+  add dword ebx,2
+ 
+  .NextCommentByte:
+   cmp word [ebx],0
+   je .EndOfFile
+   mov word ax,[CRLF]
+   cmp word [ebx],ax  
+   je .NextLine
+   inc dword ebx
+   jmp .NextCommentByte
+  
+ .NotComment:
+  cmp word [ebx],0
+  je .EndOfFile
+
+  cmp byte [ebx],' '
+  jne .LineFound
+  inc ebx
+  jmp .NextLine
+ .EndOfFile:
+  xor ebx,ebx
+ .LineFound:
+  mov eax,ebx
+  leave
+ret 4
+
+;Eax will contain float result Ebx points to last read byte.
+AtoF:
+.fltStr equ 8
+.fltRes equ 4
+  enter .fltRes,0
+  push eax
+  push ecx
+  push edx
+  mov dword ebx,[ebp+.fltStr]
   
   call AtoI
   
@@ -33,10 +177,10 @@ segment code use32 class=CODE
   fild dword [esp]
   fild dword [esp+4]
   fdivp st1,st0
-  fst dword [fltRes]
+  fst dword [ebp-.fltRes]
 
   sub dword edx,0
-  jz EndConv
+  jz .EndConv
  
   mov ebx,edx
   inc ebx
@@ -70,10 +214,14 @@ segment code use32 class=CODE
   fstp  st1             ;clean-up the register
   fmul st0,st1
   fstp st1
-  fstp dword [fltRes]
- EndConv:
-  call [ExitProcess]
-
+  fstp dword [ebp-.fltRes]
+ .EndConv:
+  mov dword eax,[ebp-.fltRes]
+  pop dword edx
+  pop dword ecx
+  pop dword eax
+  leave
+ret 4
 ;This function assumes ebx is loaded with ptr to string
 ;It returns eax with the value and ecx with dotMult, edx has the position of E.
 AtoI:
@@ -141,3 +289,13 @@ AtoI:
   mov dword edx,[ebp-.ePos]
  leave
 ret 
+
+section .bss
+WorldSector resb SECTOR_size
+
+
+section .data use32
+fileName db "World.txt",0  
+sNumpollies db "NUMPOLLIES",0
+CRLF db 0x0D,0x0A,0
+COMMENT db "//",0
