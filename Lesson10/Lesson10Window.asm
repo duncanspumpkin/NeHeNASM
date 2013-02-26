@@ -2,8 +2,6 @@
 %include "WIN32N.INC"
 %include "OPENGL32N.INC"
 %include "GLU32N.INC"
-%include "Lesson9.INC"
-
 extern GetModuleHandleA 
 extern GetCommandLineA 
 extern ExitProcess 
@@ -106,13 +104,10 @@ import wglDeleteContext opengl32.dll
 import wglCreateContext opengl32.dll
 import gluPerspective glu32.dll
 
-global zoom
-global tilt
-global twinkle
-global stars
+global xspeed
+global yspeed
+global zpos
 global filter
-
-
 
 segment code public use32 class=CODE
 
@@ -225,7 +220,7 @@ InitGL:
   push dword GL_SMOOTH
   call [glShadeModel] ;Smooth shader model
 
-  push dword __float32__(0.5)
+  push dword 0
   push dword 0
   push dword 0
   push dword 0
@@ -235,48 +230,46 @@ InitGL:
   push dword [IGl_DEPTH]
   call [glClearDepth] ;Depth buffer setup
   
+  _glColor4f __float32__(1.0),__float32__(1.0),__float32__(1.0),__float32__(0.5)
+
   push dword GL_ONE
   push dword GL_SRC_ALPHA
   call [glBlendFunc]
 
-  push dword GL_BLEND
-  call [glEnable] ;Enable blend
+  push dword GL_DEPTH_TEST
+  call [glEnable] ;Enable depth testing
+
+  push dword GL_LEQUAL
+  call [glDepthFunc] ;Type of depth test
 
   push dword GL_NICEST
   push dword GL_PERSPECTIVE_CORRECTION_HINT
   call [glHint] ;Nice calculations. Performance hit to make look better
   
-  call srand ;Load random number gen
-  mov dword edx,stars
-  xor ebx,ebx
- .StarSetLoop:
-  call rand
-  mov byte [edx+Star.r],ah
-  call rand
-  mov byte [edx+Star.g],ah
-  call rand
-  mov byte [edx+Star.b],ah
-  push dword 5
-  fild dword [esp]
-  push ebx
-  fild dword [esp]
-  push dword numStars
-  fild dword [esp]
-  fdivp st1,st0
-  fmulp st1,st0
-  fstp dword [edx+Star.dist]
-  add dword esp,12
-  add edx,Star_size
-  inc ebx
-  mov eax,numStars
-  cmp eax,ebx
-  jne .StarSetLoop
-  
+  push dword LightAmbient
+  push dword GL_AMBIENT
+  push dword GL_LIGHT1
+  call [glLightfv]
+
+  push dword LightDiffuse
+  push dword GL_DIFFUSE
+  push dword GL_LIGHT1
+  call [glLightfv]
+
+  push dword LightPosition
+  push dword GL_POSITION
+  push dword GL_LIGHT1
+  call [glLightfv]
+
+  push dword GL_LIGHT1
+  call [glEnable]
+
+  push dword GL_LIGHTING ;Debug code REMOVE
+  call [glEnable]
   ;Return true. We didnt check for errors so we assume it worked fine.
   mov dword eax,1
-
  .InitGLEnd:
- ret ;InitGL
+ret ;InitGL
 
 
 ;Performs a graceful killing of the OpenGL window
@@ -792,80 +785,153 @@ WindowMain:
   sub byte [keys+VK_F1],0
   jnz .SwitchFullScreen
 
-  call DrawGLScene
+  sub byte [keys+'L'],0
+  jnz .LightToggle
 
-  push dword [hDC]
-  call [SwapBuffers]
+  sub byte [keys+'B'],0
+  jnz .BlendToggle
 
-  sub byte [keys+'T'],0
-  jnz .TwinkleToggle
+  sub byte [keys+'F'],0
+  jnz .FilterChange
 
   sub byte [keys+VK_UP],0
   jnz .VKUP
-
+  
   sub byte [keys+VK_DOWN],0
   jnz .VKDOWN
+
+  sub byte [keys+VK_LEFT],0
+  jnz .VKLEFT
+
+  sub byte [keys+VK_RIGHT],0
+  jnz .VKRIGHT
 
   sub byte [keys+VK_PRIOR],0
   jnz .VKPGUP
 
   sub byte [keys+VK_NEXT],0
   jnz .VKPGDWN
+  
+  mov dword [lp],0
+  mov dword [fp],0
+  mov dword [bpres],0
+ .ReDraw:
+  call DrawGLScene
 
-  mov dword [tp],0
+  push dword [hDC]
+  call [SwapBuffers]
 
   jmp .MsgLoop
 
 ;*****************
- .TwinkleToggle:
-  sub dword [tp],0
-  jnz .MsgLoop
-  mov dword [tp],1
+ .LightToggle:
+  sub dword [lp],0
+  jnz .ReDraw
+  mov dword [lp],1
+  xor dword [light],1
+
+  push dword GL_LIGHTING
+  sub dword [light],0
+  jz .LightOff
+  call [glEnable]
+  jmp .MsgLoop
+ .LightOff:
+  call [glDisable]  
+  jmp .MsgLoop
+;*****************
+
+;*****************
+ .BlendToggle:
+  sub dword [bpres],0
+  jnz .ReDraw
+  mov dword [bpres],1
+  xor dword [blend],1
+
+  push dword GL_DEPTH_TEST
+  push dword GL_BLEND
+  sub dword [blend],0
+  jz .BlendOff
+  call [glEnable]
+  call [glDisable]
+  jmp .MsgLoop
+ .BlendOff:
+  call [glDisable]
+  call [glEnable] 
+  jmp .MsgLoop
+;*****************
+
+;*****************
+ .FilterChange:
+  sub dword [fp],0
+  jnz .ReDraw
+  mov dword [fp],1
   
-  xor dword [twinkle],1
+  add dword [filter],4 ;Since it is a dword we add 4 to address each time
+  cmp dword [filter],12 ;We dont want to go over our 3 filters (3*4=12)
+  jne .MsgLoop
+  mov dword [filter],0 
   jmp .MsgLoop
 ;*****************
 
 ;*****************
  .VKUP:
-  ;tilt-=0.5f
-  fld dword [tilt]
-  fsub dword [tiltgap]
-  fstp dword [tilt]
+  ;xspeed-=0.01f
+  fld dword [xspeed]
+  fsub dword [xygap]
+  fstp dword [xspeed]
   mov dword [keys+VK_UP],0
   jmp .MsgLoop
 ;*****************
 
 ;*****************
  .VKDOWN:
-  ;tilt+=0.5f
-  fld dword [tilt]
-  fadd dword [tiltgap]
-  fstp dword [tilt]
+  ;xspeed+=0.01f
+  fld dword [xspeed]
+  fadd dword [xygap]
+  fstp dword [xspeed]
   mov dword [keys+VK_DOWN],0
   jmp .MsgLoop
 ;*****************
 
 ;*****************
+ .VKLEFT:
+  ;yspeed-=0.01f
+  fld dword [yspeed]
+  fsub dword [xygap]
+  fstp dword [yspeed]
+  mov dword [keys+VK_LEFT],0
+  jmp .MsgLoop
+;*****************
+
+;*****************
+ .VKRIGHT:
+  ;yspeed+=0.01f
+  fld dword [yspeed]
+  fadd dword [xygap]
+  fstp dword [yspeed]
+  mov dword [keys+VK_RIGHT],0
+  jmp .MsgLoop
+;*****************
+
+;*****************
  .VKPGUP:
-  ;zoom-=0.2f
-  fld dword [zoom]
-  fsub dword [zoomgap]
-  fstp dword [zoom]
+  ;zpos-=0.02f
+  fld dword [zpos]
+  fsub dword [zgap]
+  fstp dword [zpos]
   mov dword [keys+VK_PRIOR],0
   jmp .MsgLoop
 ;*****************
 
 ;*****************
  .VKPGDWN:
-  ;zoom+=0.2f
-  fld dword [zoom]
-  fadd dword [zoomgap]
-  fstp dword [zoom]
+  ;zpos+=0.02f
+  fld dword [zpos]
+  fadd dword [zgap]
+  fstp dword [zpos]
   mov dword [keys+VK_NEXT],0
   jmp .MsgLoop
 ;*****************
-
  .SwitchFullScreen:
   mov byte [keys+VK_F1],0
   call KillGLWindow
@@ -1038,28 +1104,6 @@ WindowProcedure:
 ;; And, as said earlier, we free 16 bytes (our params), after returning. 
 ret 16 
 
-;; Loads a slightly random seed into RNG
-srand:
-  push edx
-  rdtsc
-  shr eax,1
-  mov dword [CurRndVal],eax
-  pop edx
-ret
-
-;; Gets a new random number returns it in eax
-;; To use modulo clear edx and div arg.
-;; Result will be in edx
-rand:
-  push edx
-  mov dword eax,[CurRndVal]
-  mov dword edx,[MultRnd]
-  mul edx
-  add dword eax, [ConstRnd]
-  and dword eax, [MaskRnd]
-  mov dword [CurRndVal],eax
-  pop edx
-ret
 
 section .data USE32
 
@@ -1094,27 +1138,30 @@ RGlS_gluNEAR      dq __float64__(0.1)   ;Near clipping plane
 RGlS_gluFOV       dq 45.0  ;Far clipping plane
 ;; Double for defineing depth buffer
 IGl_DEPTH         dq 1.0   ;Depth buffer
-
-tiltgap           dd 0.5
-zoomgap           dd 0.2
-zoom              dd -15.0
-tilt              dd 90.0
-twinkle           dd 0
-CurRndVal         dd 0x41159273
-MultRnd           dd 0x54632121
-ConstRnd          dd 54321
-MaskRnd           dd 0x7fffffff
+LightAmbient      dd 0.5, 0.5, 0.5, 1.0
+LightDiffuse      dd 1.0, 1.0, 1.0, 1.0
+LightPosition     dd 0.0, 0.0, 2.0, 1.0
+xygap             dd 0.01
+zgap              dd 0.02
+zpos              dd -5.0
+light             dd 1
+filter            dd 0
+blend             dd 0
 section .bss USE32
 ;; And we reserve a double-word for hInstance, hWnd, hDC, hRC.
 hInstance         resd 1 
 hWnd              resd 1
 hDC               resd 1
 hRC               resd 1
-tp                resd 1
+lp                resd 1
+fp                resd 1
+bpres             resd 1
 
+
+xspeed            resd 1
+yspeed            resd 1
 ;; Fullscreen and active are just booleans and we could use a byte but a dword is easier to deal with. 
 fullscreen        resd 1
 active            resd 1
 ;; Keys contains the state of keys pressed.
 keys              resd 256
-stars             resb numStars*Star_size
