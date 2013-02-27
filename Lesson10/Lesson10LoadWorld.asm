@@ -108,14 +108,71 @@ LoadWorld:
   call ReadWorldFile
   push eax
   call NextGoodLine
-  ;Check if next word is NUMPOLLIES
-  ;Get NUMPOLLIES
 
+  ;Check if next word is NUMPOLLIES
+  mov dword esi,eax
+  mov dword edi,sNumpollies
+  mov dword ecx,sNumpollies.Length ;Length of sNumpollies
+  rep cmpsb
   ;Allocate memory for pollies
- 
+  jne .LoadWorldFail
+
+  ;Get NUMPOLLIES
+  mov dword ebx,esi
+  call AtoI
+  ;eax now contains NUMPOLLIES
+  mov dword [WorldSector+SECTOR.numTriangles],eax
+  
+  ;Allocate memory for sector
+  mov dword ecx,TRIANGLE_size
+  mul ecx ;This is amount of memory required
+  push eax
+  push dword LMEM_ZEROINIT
+  call [LocalAlloc]
+  mov dword [WorldSector+SECTOR.triangle],eax
+
   ;Read rest of document
+  mov dword ecx,eax ;This points to the current triangle
+  mov dword eax,[WorldSector+SECTOR.numTriangles] ;This will count down triangle
+
+  push ebx
+  call NextGoodLine
+  push ebx
+  call AtoF
+  mov dword [ecx+VERTEX.x],eax
+
+  call SkipSpace
+  push ebx
+  call AtoF
+  mov dword [ecx+VERTEX.y],eax
+
+  call SkipSpace
+  push ebx
+  call AtoF
+  mov dword [ecx+VERTEX.z],eax
+
+  call SkipSpace
+  push ebx
+  call AtoF
+  mov dword [ecx+VERTEX.u],eax
+
+  call SkipSpace
+  push ebx
+  call AtoF
+  mov dword [ecx+VERTEX.v],eax
+  
+  call AtoF
+ .LoadWorldFail:
   xor eax,eax
   leave
+ret
+
+SkipSpace:
+  cmp byte [ebx],' '
+  jne .endSS
+  inc ebx
+  jmp SkipSpace
+ .endSS:
 ret
 
 NextGoodLine:
@@ -165,7 +222,6 @@ AtoF:
 .fltStr equ 8
 .fltRes equ 4
   enter .fltRes,0
-  push eax
   push ecx
   push edx
   mov dword ebx,[ebp+.fltStr]
@@ -177,8 +233,8 @@ AtoF:
   fild dword [esp]
   fild dword [esp+4]
   fdivp st1,st0
-  fst dword [ebp-.fltRes]
-
+  fstp dword [ebp-.fltRes]
+  add dword esp,8
   sub dword edx,0
   jz .EndConv
  
@@ -212,6 +268,7 @@ AtoF:
 ;the characteristic is still on the FPU and must be removed
 
   fstp  st1             ;clean-up the register
+  fld dword [ebp-.fltRes]
   fmul st0,st1
   fstp st1
   fstp dword [ebp-.fltRes]
@@ -219,7 +276,6 @@ AtoF:
   mov dword eax,[ebp-.fltRes]
   pop dword edx
   pop dword ecx
-  pop dword eax
   leave
 ret 4
 ;This function assumes ebx is loaded with ptr to string
@@ -276,8 +332,8 @@ AtoI:
   mov dword [ebp-.ePos],ebx
 
  .NotE:
+  jmp .EndFloatConv
   ;If not digit neg dot or E end loop
-  jmp .EndFloatConv 
 
  .EndFloatConv:
   sub dword [ebp-.sign],0
@@ -295,7 +351,10 @@ WorldSector resb SECTOR_size
 
 
 section .data use32
-fileName db "World.txt",0  
-sNumpollies db "NUMPOLLIES",0
+fileName db "World.txt",0
+
+
+sNumpollies db "NUMPOLLIES ",0
+sNumpollies.Length equ $-sNumpollies-1 ;-1 as we dont need the 0
 CRLF db 0x0D,0x0A,0
 COMMENT db "//",0
