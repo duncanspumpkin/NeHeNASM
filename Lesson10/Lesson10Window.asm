@@ -52,6 +52,7 @@ extern gluPerspective
 
 extern LoadGLTextures
 extern DrawGLScene
+extern LoadWorld
 
 
 ;; Import the Win32 API functions. 
@@ -214,6 +215,8 @@ InitGL:
   sub eax,0
   jz .InitGLEnd
   
+  call LoadWorld
+
   push dword GL_TEXTURE_2D
   call [glEnable]
 
