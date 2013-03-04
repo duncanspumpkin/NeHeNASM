@@ -188,4 +188,4 @@ section .bss
 texture resd 1
 
 section .data use32
-fileName db "Star.bmp",0  
+fileName db "Mud.bmp",0  
