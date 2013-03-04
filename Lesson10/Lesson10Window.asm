@@ -54,7 +54,6 @@ extern LoadGLTextures
 extern DrawGLScene
 extern LoadWorld
 
-
 ;; Import the Win32 API functions. 
 import GetModuleHandleA kernel32.dll 
 import GetCommandLineA kernel32.dll 
@@ -105,8 +104,8 @@ import wglDeleteContext opengl32.dll
 import wglCreateContext opengl32.dll
 import gluPerspective glu32.dll
 
-global xspeed
-global yspeed
+global yrot
+global xpos
 global zpos
 global filter
 
@@ -214,9 +213,7 @@ InitGL:
   call LoadGLTextures
   sub eax,0
   jz .InitGLEnd
-  
   call LoadWorld
-
   push dword GL_TEXTURE_2D
   call [glEnable]
 
@@ -234,7 +231,7 @@ InitGL:
   call [glClearDepth] ;Depth buffer setup
   
   _glColor4f __float32__(1.0),__float32__(1.0),__float32__(1.0),__float32__(0.5)
-
+  
   push dword GL_ONE
   push dword GL_SRC_ALPHA
   call [glBlendFunc]
@@ -878,40 +875,62 @@ WindowMain:
 
 ;*****************
  .VKUP:
-  ;xspeed-=0.01f
-  fld dword [xspeed]
-  fsub dword [xygap]
-  fstp dword [xspeed]
+  ;xpos += (float)sin(heading*piover180) * 0.05f
+  ;zpos += (float)cos(heading*piover180) * 0.05f
+
+  fld dword [yrot]
+  fld st0
+  fsin
+  fmul dword [xzgap]
+  fadd dword [xpos]
+  fstp dword [xpos]
+  fcos
+  fmul dword [xzgap]
+  fadd dword [zpos]
+  fstp dword [zpos]
   mov dword [keys+VK_UP],0
   jmp .MsgLoop
 ;*****************
 
 ;*****************
  .VKDOWN:
-  ;xspeed+=0.01f
-  fld dword [xspeed]
-  fadd dword [xygap]
-  fstp dword [xspeed]
+  ;xpos -= (float)sin(heading) * 0.05f
+  ;zpos -= (float)cos(heading) * 0.05f
+  ;heading is yrot
+  fld dword [zpos]
+  fld dword [yrot]
+  fld dword [xpos]
+  fld st1
+  fsin
+  fmul dword [xzgap]
+  fsub st1, st0
+  fstp st0
+  fstp dword [xpos]
+  fcos
+  fmul dword [xzgap]
+  fsub st1, st0
+  fstp st0
+  fstp dword [zpos]
   mov dword [keys+VK_DOWN],0
   jmp .MsgLoop
 ;*****************
 
 ;*****************
  .VKLEFT:
-  ;yspeed-=0.01f
-  fld dword [yspeed]
-  fsub dword [xygap]
-  fstp dword [yspeed]
+  ;yrot+=1.5f
+  fld dword [yrot]
+  fadd dword [yrotgap]
+  fstp dword [yrot]
   mov dword [keys+VK_LEFT],0
   jmp .MsgLoop
 ;*****************
 
 ;*****************
  .VKRIGHT:
-  ;yspeed+=0.01f
-  fld dword [yspeed]
-  fadd dword [xygap]
-  fstp dword [yspeed]
+  ;yrot-=1.5f
+  fld dword [yrot]
+  fsub dword [yrotgap]
+  fstp dword [yrot]
   mov dword [keys+VK_RIGHT],0
   jmp .MsgLoop
 ;*****************
@@ -919,9 +938,7 @@ WindowMain:
 ;*****************
  .VKPGUP:
   ;zpos-=0.02f
-  fld dword [zpos]
-  fsub dword [zgap]
-  fstp dword [zpos]
+
   mov dword [keys+VK_PRIOR],0
   jmp .MsgLoop
 ;*****************
@@ -929,9 +946,7 @@ WindowMain:
 ;*****************
  .VKPGDWN:
   ;zpos+=0.02f
-  fld dword [zpos]
-  fadd dword [zgap]
-  fstp dword [zpos]
+ 
   mov dword [keys+VK_NEXT],0
   jmp .MsgLoop
 ;*****************
@@ -1144,12 +1159,12 @@ IGl_DEPTH         dq 1.0   ;Depth buffer
 LightAmbient      dd 0.5, 0.5, 0.5, 1.0
 LightDiffuse      dd 1.0, 1.0, 1.0, 1.0
 LightPosition     dd 0.0, 0.0, 2.0, 1.0
-xygap             dd 0.01
-zgap              dd 0.02
-zpos              dd -5.0
+yrotgap           dd 0.03
+xzgap             dd 0.05
+zpos              dd 0.0
 light             dd 1
 filter            dd 0
-blend             dd 0
+blend             dd 1
 section .bss USE32
 ;; And we reserve a double-word for hInstance, hWnd, hDC, hRC.
 hInstance         resd 1 
@@ -1161,8 +1176,8 @@ fp                resd 1
 bpres             resd 1
 
 
-xspeed            resd 1
-yspeed            resd 1
+xpos            resd 1
+yrot            resd 1
 ;; Fullscreen and active are just booleans and we could use a byte but a dword is easier to deal with. 
 fullscreen        resd 1
 active            resd 1

@@ -104,8 +104,10 @@ ret 4
 
 ;Returns non zero on success
 LoadWorld:
+  enter 0,0
   push dword fileName
   call ReadWorldFile
+  push eax ;We will use this later to get pointer to start of doc mem
   push eax
   call NextGoodLine
 
@@ -134,7 +136,11 @@ LoadWorld:
   ;Read rest of document
   mov dword ecx,eax ;This points to the current triangle
   mov dword eax,[WorldSector+SECTOR.numTriangles] ;This will count down triangle
+  mov dword edx,3
+  mul edx ;Mul by 3 as each triangle has 3 vertex
+  mov edx,eax
 
+ .LoadVertex:
   push ebx
   call NextGoodLine
   push ebx
@@ -161,9 +167,19 @@ LoadWorld:
   call AtoF
   mov dword [ecx+VERTEX.v],eax
   
-  call AtoF
+  add dword ecx,VERTEX_size
+  dec dword edx
+  jnz .LoadVertex
+
+  call [LocalFree]
+  mov dword eax,1
+  jmp .LoadWorldEnd
+
  .LoadWorldFail:
+  call [LocalFree]
   xor eax,eax
+
+ .LoadWorldEnd:
   leave
 ret
 
