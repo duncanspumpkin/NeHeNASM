@@ -787,34 +787,43 @@ WindowMain:
 
   sub byte [keys+'L'],0
   jnz .LightToggle
+  mov dword [lp],0
+ .LTBk:
 
   sub byte [keys+'B'],0
   jnz .BlendToggle
+  mov dword [bpres],0
+ .BTBk:
 
   sub byte [keys+'F'],0
   jnz .FilterChange
+  mov dword [fp],0
+ .FCBk:
 
   sub byte [keys+VK_UP],0
   jnz .VKUP
+ .UPBk:
   
   sub byte [keys+VK_DOWN],0
   jnz .VKDOWN
+ .DWBk:
 
   sub byte [keys+VK_LEFT],0
   jnz .VKLEFT
+ .LFBk:
 
   sub byte [keys+VK_RIGHT],0
   jnz .VKRIGHT
+ .RGBk:
 
   sub byte [keys+VK_PRIOR],0
   jnz .VKPGUP
+ .PUBk:
 
   sub byte [keys+VK_NEXT],0
   jnz .VKPGDWN
+ .PDBk:
   
-  mov dword [lp],0
-  mov dword [fp],0
-  mov dword [bpres],0
  .ReDraw:
   call DrawGLScene
 
@@ -834,10 +843,10 @@ WindowMain:
   sub dword [light],0
   jz .LightOff
   call [glEnable]
-  jmp .MsgLoop
+  jmp .LTBk
  .LightOff:
   call [glDisable]  
-  jmp .MsgLoop
+  jmp .LTBk
 ;*****************
 
 ;*****************
@@ -853,11 +862,11 @@ WindowMain:
   jz .BlendOff
   call [glEnable]
   call [glDisable]
-  jmp .MsgLoop
+  jmp .BTBk
  .BlendOff:
   call [glDisable]
   call [glEnable] 
-  jmp .MsgLoop
+  jmp .BTBk
 ;*****************
 
 ;*****************
@@ -868,9 +877,9 @@ WindowMain:
   
   add dword [filter],4 ;Since it is a dword we add 4 to address each time
   cmp dword [filter],12 ;We dont want to go over our 3 filters (3*4=12)
-  jne .MsgLoop
+  jne .FCBk
   mov dword [filter],0 
-  jmp .MsgLoop
+  jmp .FCBk
 ;*****************
 
 ;*****************
@@ -888,8 +897,8 @@ WindowMain:
   fmul dword [xzgap]
   fadd dword [zpos]
   fstp dword [zpos]
-  mov dword [keys+VK_UP],0
-  jmp .MsgLoop
+  ;mov dword [keys+VK_UP],0
+  jmp .UPBk
 ;*****************
 
 ;*****************
@@ -911,8 +920,8 @@ WindowMain:
   fsub st1, st0
   fstp st0
   fstp dword [zpos]
-  mov dword [keys+VK_DOWN],0
-  jmp .MsgLoop
+  ;mov dword [keys+VK_DOWN],0
+  jmp .DWBk
 ;*****************
 
 ;*****************
@@ -921,8 +930,8 @@ WindowMain:
   fld dword [yrot]
   fadd dword [yrotgap]
   fstp dword [yrot]
-  mov dword [keys+VK_LEFT],0
-  jmp .MsgLoop
+  ;mov dword [keys+VK_LEFT],0
+  jmp .LFBk
 ;*****************
 
 ;*****************
@@ -931,25 +940,26 @@ WindowMain:
   fld dword [yrot]
   fsub dword [yrotgap]
   fstp dword [yrot]
-  mov dword [keys+VK_RIGHT],0
-  jmp .MsgLoop
+  ;mov dword [keys+VK_RIGHT],0
+  jmp .RGBk
 ;*****************
 
 ;*****************
  .VKPGUP:
   ;zpos-=0.02f
 
-  mov dword [keys+VK_PRIOR],0
-  jmp .MsgLoop
+  ;mov dword [keys+VK_PRIOR],0
+  jmp .PUBk
 ;*****************
 
 ;*****************
  .VKPGDWN:
   ;zpos+=0.02f
  
-  mov dword [keys+VK_NEXT],0
-  jmp .MsgLoop
+  ;mov dword [keys+VK_NEXT],0
+  jmp .PDBk
 ;*****************
+
  .SwitchFullScreen:
   mov byte [keys+VK_F1],0
   call KillGLWindow
@@ -1159,8 +1169,8 @@ IGl_DEPTH         dq 1.0   ;Depth buffer
 LightAmbient      dd 0.5, 0.5, 0.5, 1.0
 LightDiffuse      dd 1.0, 1.0, 1.0, 1.0
 LightPosition     dd 0.0, 0.0, 2.0, 1.0
-yrotgap           dd 0.03
-xzgap             dd 0.05
+yrotgap           dd 0.003
+xzgap             dd 0.005
 zpos              dd 0.0
 light             dd 1
 filter            dd 0
