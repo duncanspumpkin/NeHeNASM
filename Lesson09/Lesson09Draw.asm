@@ -1,7 +1,7 @@
 %include "WIN32N.INC"
 %include "OPENGL32N.INC"
 %include "GLU32N.INC"
-%include "Lesson9.INC"
+%include "Lesson09.INC"
 
 extern glClear
 extern glLoadIdentity
