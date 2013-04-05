@@ -1,3 +1,12 @@
+;*************************************
+;*    Draw.asm by Duncan Frost       *
+;*            05/04/2013             *
+;*************************************
+
+;Exposes "DrawGLScene" function - this will draw
+;gl scene for this lesson this is a blank window
+
+
 %include "WIN32N.INC"
 %include "OPENGL32N.INC"
 %include "GLU32N.INC"
@@ -14,10 +23,15 @@ global DrawGLScene
 
 section .code use32 
 
-;DrawGLScene This is the part which actually specifies what is being drawn.
-;
-;In future this will probably be moved to a seperate file to make it a bit 
-;easier to follow.
+;*********************************
+;*       DrawGLScene             *
+;*                               *
+;* For this lesson will draw a   *
+;* blank window.                 *
+;* Returns 0 on failure (not     *
+;* actually possible in this     *
+;* version).                     *
+;*********************************
 
 DrawGLScene:
   push dword GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT
@@ -25,6 +39,6 @@ DrawGLScene:
   
   call [glLoadIdentity] ;Reset current modelview matrix
   
-  ;Return False?
-  xor eax,eax
+  ;Return true
+  mov dword eax,1
 ret ;DrawGLScene

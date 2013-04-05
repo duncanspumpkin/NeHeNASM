@@ -1,4 +1,15 @@
-;; Define the externs for the functions that we'll use in this program. 
+;*************************************
+;*   Window.asm by Duncan Frost      *
+;*            05/04/2013             *
+;*************************************
+
+;Entry point of program at ..Start.
+
+;Controls the creation of the window and 
+;handles any input to the window. Contains
+;the message loop and window proc.
+
+
 %include "WIN32N.INC"
 %include "OPENGL32N.INC"
 %include "GLU32N.INC"
@@ -48,7 +59,6 @@ extern gluPerspective
 
 extern DrawGLScene
 
-;; Import the Win32 API functions. 
 import GetModuleHandleA kernel32.dll 
 import GetCommandLineA kernel32.dll 
 import ExitProcess kernel32.dll 
@@ -97,52 +107,59 @@ import gluPerspective glu32.dll
 
 section .code use32 
 
-;; In order to make this code as similar as possible to NeHe's OpenGL tutorial
-;; we will first get all of the params of WinMain and call the WinMain function
-;; if we were going for as small a program as possible this could be done all in
-;; the WinMain function.
+; In order to make this code as similar as possible to NeHe's OpenGL tutorial
+; we will first get all of the params of WinMain and call the WinMain function
+; if we were going for as small a program as possible this could be done all in
+; the WinMain function.
 
-;; Entry point of program
+;****************************************
+;*           ENTRY POINT                *
+;****************************************
 ..start: 
 push dword 0 
-;; GetModuleHandleA returns handle to the file used to create this proc when null (0) is param
+; GetModuleHandleA returns handle to the file used to create this proc when null (0) is param
 call [GetModuleHandleA] 
 
-;;Store the result in the ebx reg.
+;Store the result in the ebx reg.
 mov ebx, eax 
 
-;; Returns a pointer to the command line arguments. If we are not using commandline params this is
-;; not requried.
+; Returns a pointer to the command line arguments. If we are not using commandline params this is
+; not requried.
 call [GetCommandLineA] 
-;;Since we only use this to send to WinMain there is no point saving it to a variable
+;Since we only use this to send to WinMain there is no point saving it to a variable
 
-;; For the sake of making things look like a normal C prog we have a winmain func
-;; this will be passed all the normal winmain params (i.e. handle to instance, previous instance,
-;; commandline params, show param).
+; For the sake of making things look like a normal C prog we have a winmain func
+; this will be passed all the normal winmain params (i.e. handle to instance, previous instance,
+; commandline params, show param).
 push dword SW_SHOWDEFAULT 
-push eax   ;;push pointer to command line arguments 
-;; And a NULL 
+push eax   ;push pointer to command line arguments 
+; And a NULL 
 push dword 0 
-;; Then the hInstance variable. 
+; Then the hInstance variable. 
 push ebx 
 
-;; And we make a call to WindowMain(). See below.
+; And we make a call to WindowMain(). See below.
 call WindowMain 
 
-;; The program should be complete now push the result of our prog and exit.
+; The program should be complete now push the result of our prog and exit.
 push eax 
 call [ExitProcess] 
-;; Exit Point of our program
+;*************************************
+;*          EXIT POINT               *
+;*************************************
 
-
-;; Resize the OpenGL Scene
-;;
-;; 2 params width and height
-
+;*********************************************
+;*      ResizeGLScene( width, height )       *
+;*********************************************
+;* Input is width & height dwords. Will      *
+;* change the size of the window.            *
+;* Returns 1 even if it fails because it does*
+;* not check for failure.                    *
+;*********************************************
 ResizeGLScene:
 .width equ 8
 .height equ 12
-.aspectRatio equ 8 ;Aspect ratio is a qword and takes 8 bytes
+.aspectRatio equ 8 ;Aspect ratio is a qword
   enter .aspectRatio,0 ;Aspect ratio is furthest in stack
   
   ;Adds one to height if 0 to prevent divide by 0 problem
@@ -165,13 +182,13 @@ ResizeGLScene:
   ;Now we need to do a little maths to work out the aspect ratio
   fild dword [ebp+.height]
   fild dword [ebp+.width]
-  fdivp st1,st0 ;width/height ? I think...
+  fdivp st1,st0 ;height/width
   fstp qword [ebp-.aspectRatio] ;Store the aspect ratio
 
   push dword [RGlS_gluFAR+4]
   push dword [RGlS_gluFAR]
   push dword [RGlS_gluNEAR+4]
-  push dword [RGlS_gluNEAR] ;Problem area
+  push dword [RGlS_gluNEAR] 
   push dword [ebp-.aspectRatio-4]
   push dword [ebp-.aspectRatio]
   push dword [RGlS_gluFOV+4]
@@ -189,12 +206,15 @@ ResizeGLScene:
 ret 8;ResizeGLScene 2 dword Params
 
 
-
-;InitGL does what it says on the tin
-;
-;
-;
-
+;*********************************************
+;*                InitGL                     *
+;*********************************************
+;* Inits all of the GL functions in later    *
+;* lessons it is used more but for now can   *
+;* almost be ignored as all it does is make  *
+;* the background black.                     *
+;* Always returns 1.                         *
+;*********************************************
 InitGL:
   push dword GL_SMOOTH
   call [glShadeModel] ;Smooth shader model
@@ -202,7 +222,7 @@ InitGL:
   push dword 0
   push dword 0
   push dword 0
-  push dword 0
+  push dword 0 ;RGBA
   call [glClearColor] ;Black background colour
 
   push dword [IGl_DEPTH+4] ;1.0
@@ -223,12 +243,14 @@ InitGL:
   mov dword eax,1
 ret ;InitGL
 
-
-;Performs a graceful killing of the OpenGL window
-;
-;
-
+;*********************************************
+;*             KillGLWindow                  *
+;*********************************************
+;* Gracefully killes the OpenGL window.      *
+;* Does not return anything!                 *
+;*********************************************
 KillGLWindow:
+
   sub dword [fullscreen],0
   jz .NotFullScreen
 
@@ -250,7 +272,7 @@ KillGLWindow:
   or eax,eax
   jnz .ReleaseableRC
 
-  push dword MB_OK | MB_ICONINFORMATION ;Word??
+  push dword MB_OK | MB_ICONINFORMATION
   push dword SHUTDWN
   push dword RRCDCFAIL
   push dword 0
@@ -294,7 +316,7 @@ KillGLWindow:
   sub dword [hWnd],0
   jz .NohWnd
 
-  push dword [hWnd]
+  push dword [hWnd] ;Finally destroy that window
   call [DestroyWindow]
   
   or eax,eax
@@ -308,6 +330,7 @@ KillGLWindow:
   
  .NohWnd:
   mov dword [hWnd],0
+
   ;Unregister WndClass
   push dword [hInstance]
   push dword ClassName
@@ -326,11 +349,19 @@ KillGLWindow:
 
 ret ;KillGLWindow
 
-; Creates a new window
-; has the following 5 params: char* title, int width, int height, int bits, bool fullscreen
-; 4*5 16 bytes
-;
+;***********************************************************
+;* CreateGLWindow( title, width, height, bits,fullscreen ) *
+;***********************************************************
+;* Creates a new window of specified width & height. It    *    
+;* can be fullscreen fi required. Bits is the number of    *
+;* colour bits. It is best to not change this from 16.     *
+;* This does a lot of windows setup if you were to change  *                    
+;* the version of openGL you would have to edit this even  *
+;* though it isn't openGL code.                            *
+;* Returns 1 on success non zero on failure.               *
+;***********************************************************
 CreateGLWindow: 
+
 .title equ 8
 .width equ 12
 .height equ 16
@@ -354,55 +385,42 @@ CreateGLWindow:
   mov dword [ebx+RECT.bottom],eax
   
   mov dword eax,[ebp+.fullscreen]
-  mov dword [fullscreen],eax ;Possibly wrong will need to test
+  mov dword [fullscreen],eax
 
   push dword 0
   call [GetModuleHandleA]
   mov dword [hInstance],eax
 
-  ;; Now fill out wndclass
-  lea ebx, [ebp-.wndClass]                  ;; We load EBX with the address of our WNDCLASSEX structure. 
-
-  ;; The structure of WNDCLASSEX can be found at this page: 
-  ;; http://msdn.microsoft.com/en-us/library/ms633577(v=vs.85).aspx
+  ; Now fill out wndclass
+  lea ebx, [ebp-.wndClass] 
     
-  mov dword [ebx+WNDCLASSEX.cbSize], WNDCLASSEX_size   ;; Offset 00 is the size of the structure. 
+  mov dword [ebx+WNDCLASSEX.cbSize], WNDCLASSEX_size   ;size of the structure. 
   mov dword [ebx+WNDCLASSEX.style], CS_HREDRAW | CS_VREDRAW | CS_OWNDC   
-  mov dword [ebx+WNDCLASSEX.lpfnWndProc], WindowProcedure             ;; Offset 08 is the address of our window procedure. 
-  mov dword [ebx+WNDCLASSEX.cbClsExtra], 0      ;; I'm not sure what offset 12 and offset 16 are for. 
-  mov dword [ebx+WNDCLASSEX.cbWndExtra], 0      ;; But I do know that they're supposed to be NULL, at least for now. 
+  mov dword [ebx+WNDCLASSEX.lpfnWndProc], WindowProcedure   ;address of our window procedure. 
+  mov dword [ebx+WNDCLASSEX.cbClsExtra], 0
+  mov dword [ebx+WNDCLASSEX.cbWndExtra], 0 
   mov dword eax,[hInstance]
-  mov dword [ebx+WNDCLASSEX.hInstance], eax  ;; Offset 20 is the hInstance value. 
+  mov dword [ebx+WNDCLASSEX.hInstance], eax
+  mov dword [ebx+WNDCLASSEX.hbrBackground], 0   ;background brush
+  mov dword [ebx+WNDCLASSEX.lpszMenuName], 0   ;No menu
+  mov dword [ebx+WNDCLASSEX.lpszClassName], ClassName  ;Classy 
 
-  mov dword [ebx+WNDCLASSEX.hbrBackground], 0   ;; Offset 32 is the handle to the background brush. We set that to COLOR_WINDOW + 1. 
-  mov dword [ebx+WNDCLASSEX.lpszMenuName], 0      ;; Offset 36 is the menu name, what we set to NULL, because we don't have a menu. 
-  mov dword [ebx+WNDCLASSEX.lpszClassName], ClassName                     ;; Offset 40 is the class name for our window class. 
-
-  ;; Note that when we're trying to pass a string, we pass the memory address of the string, and the 
-  ;; function to which we pass that address takes care of the rest. 
-
-  ;; LoadIcon(0, IDI_APPLICATION) where IDI_APPLICATION is equal to 32512. 
   push dword IDI_WINLOGO 
   push dword 0 
   call [LoadIconA] 
 
-  ;; All Win32 API functions preserve the EBP, EBX, ESI, and EDI registers, so it's 
-  ;; okay if we use EBX to store the address of the WNDCLASSEX structure, for now. 
-        
-  mov dword [ebx+WNDCLASSEX.hIcon], eax  ;; Offset 24 is the handle to the icon for our window. 
-  mov dword [ebx+WNDCLASSEX.hIconSm], eax  ;; Offset 44 is the handle to the small icon for our window. 
+  mov dword [ebx+WNDCLASSEX.hIcon], eax  ;icon for our window. 
+  mov dword [ebx+WNDCLASSEX.hIconSm], eax  ;small icon for our window. 
 
-        
-  ;; LoadCursor(0, IDC_ARROW) where IDC_ARROW is equal to 32512. 
   push dword IDC_ARROW 
   push dword 0 
   call [LoadCursorA] 
         
-  mov dword [ebx+WNDCLASSEX.hCursor], eax  ;; Offset 28 is the handle to the cursor for our window. 
-  
+  mov dword [ebx+WNDCLASSEX.hCursor], eax
+
   push ebx
-  call [RegisterClassExA]      
-  
+  call [RegisterClassExA] ;Finally register the class
+
   sub eax,0 
   jnz .RegisterClassOkay
   push dword MB_OK|MB_ICONEXCLAMATION
@@ -650,6 +668,8 @@ CreateGLWindow:
   mov dword eax,1
  .ExitCreateGL:
   leave
+; has the following 5 params: char* title, int width, int height, int bits, bool fullscreen
+; 4*5 20 bytes
 ret 20 ;CreateGLWindow 5 params
 
 ;; This is now the WindowMain() function. 
