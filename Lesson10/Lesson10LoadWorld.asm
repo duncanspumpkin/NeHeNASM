@@ -215,6 +215,8 @@ NextGoodLine:
    mov word ax,[CRLF]
    cmp word [ebx],ax  
    je .NextLine
+   cmp byte [ebx],0xA
+   je .NextLine
    inc dword ebx
    jmp .NextCommentByte
   
@@ -222,6 +224,12 @@ NextGoodLine:
   cmp word [ebx],0
   je .EndOfFile
 
+  cmp byte [ebx],0xA
+  jne .NotCR
+  inc ebx
+  jmp .NextLine
+
+ .NotCR:
   cmp byte [ebx],' '
   jne .LineFound
   inc ebx
